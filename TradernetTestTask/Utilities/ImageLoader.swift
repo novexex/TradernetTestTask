@@ -21,8 +21,12 @@ final class ImageLoader {
             return nil
         }
 
-        let task = session.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data = data, let image = UIImage(data: data) else {
+        let task = session.dataTask(with: url) { [weak self] data, response, _ in
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard statusCode == 200,
+                  let data = data,
+                  let image = UIImage(data: data),
+                  image.size.width > 1, image.size.height > 1 else {
                 DispatchQueue.main.async { completion(nil) }
                 return
             }

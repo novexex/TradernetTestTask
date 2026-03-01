@@ -43,20 +43,20 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private func listen() {
         webSocketTask?.receive { [weak self] result in
-            guard let self = self else { return }
+            guard let self else { return }
             switch result {
             case .success(let message):
                 switch message {
                 case .string(let text):
-                    self.handleMessage(text)
+                    handleMessage(text)
                 case .data:
                     break
                 @unknown default:
                     break
                 }
-                self.listen()
+                listen()
             case .failure(let error):
-                self.handleDisconnect(error: error)
+                handleDisconnect(error: error)
             }
         }
     }

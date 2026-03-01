@@ -17,7 +17,6 @@ final class QuoteCell: UITableViewCell {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 10
-        iv.backgroundColor = UIColor(red: 230/255, green: 230/255, blue: 230/255, alpha: 1)
         return iv
     }()
 
@@ -55,11 +54,20 @@ final class QuoteCell: UITableViewCell {
     }()
 
     private let chevronImageView: UIImageView = {
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
         let iv = UIImageView()
-        iv.image = UIImage(systemName: "chevron.right")
-        iv.tintColor = UIColor(red: 200/255, green: 200/255, blue: 200/255, alpha: 1)
+        iv.image = UIImage(systemName: "chevron.right", withConfiguration: config)
+        iv.tintColor = UIColor(red: 150/255, green: 150/255, blue: 150/255, alpha: 1)
         iv.contentMode = .scaleAspectFit
         return iv
+    }()
+
+    private let tickerRow: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 6
+        stack.alignment = .center
+        return stack
     }()
 
     // MARK: - Properties
@@ -85,6 +93,7 @@ final class QuoteCell: UITableViewCell {
         imageLoadTask?.cancel()
         imageLoadTask = nil
         logoImageView.image = nil
+        logoImageView.removeFromSuperview()
         currentTicker = nil
         percentBadge.isHidden = true
         priceChangeLabel.text = nil
@@ -94,11 +103,7 @@ final class QuoteCell: UITableViewCell {
     // MARK: - Layout
 
     private func setupLayout() {
-        // Top row: [logo] TICKER
-        let tickerRow = UIStackView(arrangedSubviews: [logoImageView, tickerLabel])
-        tickerRow.axis = .horizontal
-        tickerRow.spacing = 6
-        tickerRow.alignment = .center
+        tickerRow.addArrangedSubview(tickerLabel)
 
         // Left column: ticker row + subtitle, vertically centered
         let leftStack = UIStackView(arrangedSubviews: [tickerRow, subtitleLabel])
@@ -122,8 +127,8 @@ final class QuoteCell: UITableViewCell {
         chevronImageView.snp.makeConstraints { make in
             make.trailing.equalToSuperview().offset(-12)
             make.centerY.equalToSuperview()
-            make.width.equalTo(8)
-            make.height.equalTo(14)
+            make.width.equalTo(10)
+            make.height.equalTo(16)
         }
 
         leftStack.snp.makeConstraints { make in
@@ -193,8 +198,9 @@ final class QuoteCell: UITableViewCell {
     private func loadLogo(for ticker: String) {
         guard let url = Constants.logoURL(for: ticker) else { return }
         imageLoadTask = ImageLoader.shared.loadImage(from: url) { [weak self] image in
-            guard let self = self, self.currentTicker == ticker else { return }
+            guard let self, currentTicker == ticker, let image else { return }
             self.logoImageView.image = image
+            self.tickerRow.insertArrangedSubview(self.logoImageView, at: 0)
         }
     }
 }
