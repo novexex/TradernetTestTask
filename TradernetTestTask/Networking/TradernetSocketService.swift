@@ -11,8 +11,6 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var urlSession: URLSession?
-    private var pingInterval: TimeInterval = 25
-    private var pingTimer: Timer?
     private var isConnected = false
     private var pendingTickers: [String]?
 
@@ -27,8 +25,6 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     func disconnect() {
         isConnected = false
-        pingTimer?.invalidate()
-        pingTimer = nil
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         urlSession?.invalidateAndCancel()
@@ -66,73 +62,48 @@ final class TradernetSocketService: NSObject, WebSocketService {
     }
 
     private func handleMessage(_ text: String) {
-        // Engine.IO open packet: "0{...}"
-        if text.hasPrefix("0{") || text == "0" {
-            handleOpenPacket(text)
-            return
-        }
-
-        // Socket.IO connect ack: "40" or "40{...}"
-        if text.hasPrefix("40") {
-            handleConnectAck()
-            return
-        }
-
-        // Engine.IO ping: "2"
-        if text == "2" {
-            sendRaw("3")
-            return
-        }
+        // Engine.IO ping/pong
+        if text == "2" { sendRaw("3"); return }
+        if text == "3" { return }
 
         // Socket.IO event: "42[...]"
         if text.hasPrefix("42") {
-            handleEvent(text)
+            handleEventPayload(String(text.dropFirst(2)))
+            return
+        }
+
+        // Raw JSON array (server sends events without Engine.IO framing)
+        if text.hasPrefix("[") {
+            handleEventPayload(text)
             return
         }
     }
 
-    private func handleOpenPacket(_ text: String) {
-        let jsonString = String(text.dropFirst(1))
-        if let data = jsonString.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let interval = json["pingInterval"] as? Double {
-            pingInterval = interval / 1000.0
-        }
-        // Send Socket.IO connect to default namespace
-        sendRaw("40")
-    }
-
-    private func handleConnectAck() {
-        isConnected = true
-        startPingTimer()
-        DispatchQueue.main.async { [weak self] in
-            self?.delegate?.webSocketDidConnect()
-            if let tickers = self?.pendingTickers {
-                self?.pendingTickers = nil
-                self?.sendSubscription(tickers)
-            }
-        }
-    }
-
-    private func handleEvent(_ text: String) {
-        let payload = String(text.dropFirst(2))
+    private func handleEventPayload(_ payload: String) {
         guard let parsed = SocketMessageParser.parse(payload) else { return }
 
-        if parsed.event == "q", let quoteData = parsed.data as? [String: Any] {
-            DispatchQueue.main.async { [weak self] in
-                self?.delegate?.webSocketDidReceiveQuote(data: quoteData)
+        switch parsed.event {
+        case "q":
+            if let quoteData = parsed.data as? [String: Any] {
+                delegate?.webSocketDidReceiveQuote(data: quoteData)
             }
+        case "userData":
+            if !isConnected {
+                isConnected = true
+                delegate?.webSocketDidConnect()
+                if let tickers = pendingTickers {
+                    pendingTickers = nil
+                    sendSubscription(tickers)
+                }
+            }
+        default:
+            break
         }
     }
 
     private func handleDisconnect(error: Error?) {
         isConnected = false
-        pingTimer?.invalidate()
-        pingTimer = nil
-        DispatchQueue.main.async { [weak self] in
-            self?.delegate?.webSocketDidDisconnect(error: error)
-        }
-        // Auto-reconnect after delay
+        delegate?.webSocketDidDisconnect(error: error)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             self?.connect()
         }
@@ -140,21 +111,16 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private func sendSubscription(_ tickers: [String]) {
         guard let data = try? JSONSerialization.data(
-            withJSONObject: ["notifyQuotes", tickers],
-            options: []
-        ),
-        let jsonString = String(data: data, encoding: .utf8) else { return }
-        sendRaw("42\(jsonString)")
+            withJSONObject: ["quotes", tickers], options: []
+        ), let jsonString = String(data: data, encoding: .utf8) else { return }
+        sendRaw(jsonString)
     }
 
     private func sendRaw(_ text: String) {
-        webSocketTask?.send(.string(text)) { _ in }
-    }
-
-    private func startPingTimer() {
-        pingTimer?.invalidate()
-        pingTimer = Timer.scheduledTimer(withTimeInterval: pingInterval, repeats: true) { [weak self] _ in
-            self?.sendRaw("2")
+        webSocketTask?.send(.string(text)) { error in
+            if let error = error {
+                print("[WS] Send error: \(error)")
+            }
         }
     }
 }
@@ -164,7 +130,7 @@ final class TradernetSocketService: NSObject, WebSocketService {
 extension TradernetSocketService: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        // Connection opened at transport level; wait for Engine.IO open packet
+        // Wait for server's userData event before subscribing
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,

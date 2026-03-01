@@ -29,6 +29,7 @@ final class QuotesViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = "Quotes"
+        configureNavigationBar()
         setupTableView()
         viewModel.delegate = self
         viewModel.start()
@@ -43,6 +44,15 @@ final class QuotesViewController: UIViewController {
 
     // MARK: - Setup
 
+    private func configureNavigationBar() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .white
+        appearance.titleTextAttributes = [.foregroundColor: UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)]
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+    }
+
     private func setupTableView() {
         tableView.dataSource = self
         tableView.delegate = self
@@ -53,7 +63,7 @@ final class QuotesViewController: UIViewController {
 
         view.addSubview(tableView)
         tableView.snp.makeConstraints { make in
-            make.edges.equalTo(view.safeAreaLayoutGuide)
+            make.edges.equalToSuperview()
         }
     }
 }

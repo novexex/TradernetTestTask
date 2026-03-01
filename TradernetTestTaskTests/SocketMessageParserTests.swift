@@ -21,12 +21,12 @@ final class SocketMessageParserTests: XCTestCase {
         XCTAssertEqual(data?["ltp"] as? Double, 237.49)
     }
 
-    func testParseNotifyQuotesEvent() {
-        let payload = "[\"notifyQuotes\",[\"AAPL\",\"GAZP\"]]"
+    func testParseQuotesSubscribeEvent() {
+        let payload = "[\"quotes\",[\"AAPL\",\"GAZP\"]]"
         let result = SocketMessageParser.parse(payload)
 
         XCTAssertNotNil(result)
-        XCTAssertEqual(result?.event, "notifyQuotes")
+        XCTAssertEqual(result?.event, "quotes")
 
         let tickers = result?.data as? [String]
         XCTAssertEqual(tickers, ["AAPL", "GAZP"])

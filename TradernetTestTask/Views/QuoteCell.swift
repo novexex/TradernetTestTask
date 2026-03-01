@@ -78,6 +78,9 @@ final class QuoteCell: UITableViewCell {
         imageLoadTask = nil
         logoImageView.image = nil
         currentTicker = nil
+        percentBadge.isHidden = true
+        priceChangeLabel.text = nil
+        subtitleLabel.text = nil
     }
 
     // MARK: - Layout
@@ -139,10 +142,17 @@ final class QuoteCell: UITableViewCell {
         subtitleLabel.text = subtitleParts.joined(separator: " | ")
 
         // Percent badge
-        let percentText = QuoteFormatter.formatPercentChange(quote.percentChange)
-        percentBadge.text = "  \(percentText)  "
-        let badgeColor = QuoteFormatter.color(for: quote.changeDirection)
-        percentBadge.backgroundColor = badgeColor
+        if quote.percentChange != nil {
+            let percentText = QuoteFormatter.formatPercentChange(quote.percentChange)
+            percentBadge.text = "  \(percentText)  "
+            let badgeColor = QuoteFormatter.color(for: quote.changeDirection)
+            percentBadge.backgroundColor = badgeColor
+            percentBadge.isHidden = false
+        } else {
+            percentBadge.text = nil
+            percentBadge.backgroundColor = .clear
+            percentBadge.isHidden = true
+        }
 
         // Price + change
         priceChangeLabel.text = QuoteFormatter.formatPriceWithChange(
