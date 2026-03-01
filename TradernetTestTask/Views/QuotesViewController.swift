@@ -57,8 +57,8 @@ final class QuotesViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(QuoteCell.self, forCellReuseIdentifier: QuoteCell.reuseIdentifier)
-        tableView.rowHeight = 64
-        tableView.separatorInset = UIEdgeInsets(top: 0, left: 60, bottom: 0, right: 0)
+        tableView.rowHeight = 68
+        tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
         tableView.backgroundColor = .white
 
         view.addSubview(tableView)
@@ -96,6 +96,9 @@ extension QuotesViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        let quote = viewModel.quotes[indexPath.row]
+        let detailVC = QuoteDetailViewController(quote: quote)
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 }
 

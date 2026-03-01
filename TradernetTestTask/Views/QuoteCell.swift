@@ -16,7 +16,7 @@ final class QuoteCell: UITableViewCell {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
-        iv.layer.cornerRadius = 16
+        iv.layer.cornerRadius = 10
         iv.backgroundColor = UIColor(red: 230/255, green: 230/255, blue: 230/255, alpha: 1)
         return iv
     }()
@@ -30,7 +30,7 @@ final class QuoteCell: UITableViewCell {
 
     private let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.font = .systemFont(ofSize: 12, weight: .regular)
         label.textColor = UIColor(red: 150/255, green: 150/255, blue: 150/255, alpha: 1)
         label.lineBreakMode = .byTruncatingTail
         return label
@@ -48,10 +48,18 @@ final class QuoteCell: UITableViewCell {
 
     private let priceChangeLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.font = .systemFont(ofSize: 12, weight: .regular)
         label.textColor = UIColor(red: 100/255, green: 100/255, blue: 100/255, alpha: 1)
         label.textAlignment = .right
         return label
+    }()
+
+    private let chevronImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.image = UIImage(systemName: "chevron.right")
+        iv.tintColor = UIColor(red: 200/255, green: 200/255, blue: 200/255, alpha: 1)
+        iv.contentMode = .scaleAspectFit
+        return iv
     }()
 
     // MARK: - Properties
@@ -63,7 +71,7 @@ final class QuoteCell: UITableViewCell {
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        selectionStyle = .none
+        selectionStyle = .default
         backgroundColor = .white
         setupLayout()
     }
@@ -86,43 +94,53 @@ final class QuoteCell: UITableViewCell {
     // MARK: - Layout
 
     private func setupLayout() {
-        let leftStack = UIStackView(arrangedSubviews: [tickerLabel, subtitleLabel])
+        // Top row: [logo] TICKER
+        let tickerRow = UIStackView(arrangedSubviews: [logoImageView, tickerLabel])
+        tickerRow.axis = .horizontal
+        tickerRow.spacing = 6
+        tickerRow.alignment = .center
+
+        // Left column: ticker row + subtitle, vertically centered
+        let leftStack = UIStackView(arrangedSubviews: [tickerRow, subtitleLabel])
         leftStack.axis = .vertical
         leftStack.spacing = 2
 
+        // Right column: badge + price
         let rightStack = UIStackView(arrangedSubviews: [percentBadge, priceChangeLabel])
         rightStack.axis = .vertical
         rightStack.spacing = 4
         rightStack.alignment = .trailing
 
-        contentView.addSubview(logoImageView)
         contentView.addSubview(leftStack)
         contentView.addSubview(rightStack)
+        contentView.addSubview(chevronImageView)
 
         logoImageView.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(16)
+            make.width.height.equalTo(20)
+        }
+
+        chevronImageView.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().offset(-12)
             make.centerY.equalToSuperview()
-            make.width.height.equalTo(32)
+            make.width.equalTo(8)
+            make.height.equalTo(14)
         }
 
         leftStack.snp.makeConstraints { make in
-            make.leading.equalTo(logoImageView.snp.trailing).offset(12)
+            make.leading.equalToSuperview().offset(16)
             make.centerY.equalToSuperview()
             make.trailing.lessThanOrEqualTo(rightStack.snp.leading).offset(-8)
         }
 
         rightStack.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().offset(-16)
+            make.trailing.equalTo(chevronImageView.snp.leading).offset(-8)
             make.centerY.equalToSuperview()
         }
 
         percentBadge.snp.makeConstraints { make in
-            make.height.equalTo(28)
-            make.width.greaterThanOrEqualTo(70)
+            make.height.equalTo(24)
+            make.width.greaterThanOrEqualTo(64)
         }
-
-        // Internal padding for badge
-        percentBadge.layoutMargins = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
     }
 
     // MARK: - Configure
