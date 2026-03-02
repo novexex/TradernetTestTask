@@ -163,8 +163,15 @@ extension QuotesViewController: QuotesViewModelDelegate {
         activityIndicator.stopAnimating()
         statusLabel.isHidden = true
         retryButton.isHidden = true
-        let indexPaths = indexes.map { IndexPath(row: $0, section: 0) }
-        tableView.reloadRows(at: indexPaths, with: .none)
+
+        for index in indexes {
+            let indexPath = IndexPath(row: index, section: 0)
+            if let cell = tableView.cellForRow(at: indexPath) as? QuoteCell {
+                let quote = viewModel.quotes[index]
+                let direction = viewModel.changeDirections[quote.ticker]
+                cell.configure(with: quote, direction: direction, imageLoader: imageLoader)
+            }
+        }
     }
 
     func quotesDidReload() {

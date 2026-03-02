@@ -138,6 +138,15 @@ final class QuotesViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.changeDirections["AAPL"], .up)
     }
 
+    func testChangeDirectionResetsToNoneWhenUnchanged() {
+        mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
+        XCTAssertEqual(viewModel.changeDirections["AAPL"], .up)
+
+        // Same pcp — direction should reset to .none
+        mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
+        XCTAssertEqual(viewModel.changeDirections["AAPL"], .none)
+    }
+
     // MARK: - Reconnection
 
     func testResubscribesAfterReconnect() {

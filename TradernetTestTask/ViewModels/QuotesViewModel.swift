@@ -75,9 +75,7 @@ final class QuotesViewModel: WebSocketServiceDelegate {
 
         // Detect change direction
         let direction = detectDirection(oldPcp: oldPcp, newPcp: newPcp)
-        if direction != .none {
-            changeDirections[ticker] = direction
-        }
+        changeDirections[ticker] = direction
 
         delegate?.quotesDidUpdate(at: [index])
 
