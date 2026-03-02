@@ -11,6 +11,7 @@ final class QuotesViewController: UIViewController {
     private let tableView = UITableView()
     private let viewModel: QuotesViewModel
     private let imageLoader: ImageLoading
+    private let formatter: QuoteFormatting
     private weak var coordinator: QuotesCoordinating?
 
     private let statusLabel: UILabel = {
@@ -25,7 +26,7 @@ final class QuotesViewController: UIViewController {
 
     private let retryButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Retry", for: .normal)
+        button.setTitle(L10n.Quotes.retry, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.setTitleColor(Colors.green, for: .normal)
         button.isHidden = true
@@ -41,9 +42,10 @@ final class QuotesViewController: UIViewController {
 
     // MARK: - Init
 
-    init(viewModel: QuotesViewModel, imageLoader: ImageLoading, coordinator: QuotesCoordinating?) {
+    init(viewModel: QuotesViewModel, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), coordinator: QuotesCoordinating?) {
         self.viewModel = viewModel
         self.imageLoader = imageLoader
+        self.formatter = formatter
         self.coordinator = coordinator
         super.init(nibName: nil, bundle: nil)
     }
@@ -57,7 +59,7 @@ final class QuotesViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Colors.background
-        title = "Quotes"
+        title = L10n.Quotes.title
         configureNavigationBar()
         setupTableView()
         setupStatusView()
@@ -138,7 +140,7 @@ extension QuotesViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         let quote = viewModel.quotes[indexPath.row]
-        cell.configure(with: quote, imageLoader: imageLoader)
+        cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter)
         return cell
     }
 }
@@ -167,7 +169,7 @@ extension QuotesViewController: QuotesViewModelDelegate {
             let indexPath = IndexPath(row: index, section: 0)
             if let cell = tableView.cellForRow(at: indexPath) as? QuoteCell {
                 let quote = viewModel.quotes[index]
-                cell.configure(with: quote, imageLoader: imageLoader)
+                cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter)
             }
         }
     }
@@ -178,7 +180,7 @@ extension QuotesViewController: QuotesViewModelDelegate {
 
     func quotesDidFailToConnect() {
         activityIndicator.stopAnimating()
-        statusLabel.text = "Connection failed"
+        statusLabel.text = L10n.Quotes.connectionFailed
         statusLabel.isHidden = false
         retryButton.isHidden = false
     }

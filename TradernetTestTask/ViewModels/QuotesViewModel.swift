@@ -19,13 +19,15 @@ final class QuotesViewModel: WebSocketServiceDelegate {
     private(set) var quotes: [Quote] = []
     private var tickerIndexMap: [String: Int] = [:]
     private let service: WebSocketService
+    private let mapper: QuoteMapping
     private let tickers: [String]
 
     /// Per-ticker observers for detail screen live updates
     private var quoteObservers: [UUID: (ticker: String, handler: (Quote) -> Void)] = [:]
 
-    init(service: WebSocketService, tickers: [String] = Constants.tickers) {
+    init(service: WebSocketService, mapper: QuoteMapping = QuoteMapper(), tickers: [String] = Constants.tickers) {
         self.service = service
+        self.mapper = mapper
         self.tickers = tickers
         self.service.delegate = self
         initializeQuotes()
@@ -60,10 +62,10 @@ final class QuotesViewModel: WebSocketServiceDelegate {
     }
 
     func webSocketDidReceiveQuote(data: [String: Any]) {
-        guard let ticker = data["c"] as? String,
+        guard let ticker = data[QuoteKey.ticker.rawValue] as? String,
               let index = tickerIndexMap[ticker] else { return }
 
-        quotes[index].merge(from: data)
+        quotes[index] = mapper.merge(quotes[index], with: data)
         delegate?.quotesDidUpdate(at: [index])
 
         let updatedQuote = quotes[index]

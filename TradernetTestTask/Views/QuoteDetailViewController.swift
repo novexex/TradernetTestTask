@@ -10,6 +10,7 @@ final class QuoteDetailViewController: UIViewController {
 
     private var quote: Quote
     private let imageLoader: ImageLoading
+    private let formatter: QuoteFormatting
     private let viewModel: QuotesViewModel
     private var observationId: UUID?
 
@@ -63,13 +64,14 @@ final class QuoteDetailViewController: UIViewController {
         return stack
     }()
 
-    private var infoValueLabels: [String: UILabel] = [:]
+    private var infoValueLabels: [QuoteKey: UILabel] = [:]
 
     // MARK: - Init
 
-    init(quote: Quote, imageLoader: ImageLoading, viewModel: QuotesViewModel) {
+    init(quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), viewModel: QuotesViewModel) {
         self.quote = quote
         self.imageLoader = imageLoader
+        self.formatter = formatter
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -153,38 +155,38 @@ final class QuoteDetailViewController: UIViewController {
         updateDynamicContent(with: quote)
 
         // Info rows
-        addInfoRow(key: "ticker", title: "Ticker", value: quote.ticker)
-        addInfoRow(key: "exchange", title: "Exchange", value: quote.lastTradeExchange)
-        addInfoRow(key: "name", title: "Name", value: quote.name)
-        addInfoRow(key: "price", title: "Last Trade Price",
-                   value: quote.lastTradePrice.map { QuoteFormatter.formatPrice($0, minStep: quote.minStep) })
-        addInfoRow(key: "pcp", title: "Change (%)",
-                   value: quote.percentChange.map { QuoteFormatter.formatPercentChange($0) })
-        addInfoRow(key: "chg", title: "Change (pts)",
-                   value: quote.pointChange.map { QuoteFormatter.formatPointChange($0, minStep: quote.minStep) })
-        addInfoRow(key: "minStep", title: "Min Step",
+        addInfoRow(key: .ticker, title: L10n.QuoteDetail.ticker, value: quote.ticker)
+        addInfoRow(key: .lastTradeExchange, title: L10n.QuoteDetail.exchange, value: quote.lastTradeExchange)
+        addInfoRow(key: .name, title: L10n.QuoteDetail.name, value: quote.name)
+        addInfoRow(key: .lastTradePrice, title: L10n.QuoteDetail.lastTradePrice,
+                   value: quote.lastTradePrice.map { formatter.formatPrice($0, minStep: quote.minStep) })
+        addInfoRow(key: .percentChange, title: L10n.QuoteDetail.changePercent,
+                   value: quote.percentChange.map { formatter.formatPercentChange($0) })
+        addInfoRow(key: .pointChange, title: L10n.QuoteDetail.changePoints,
+                   value: quote.pointChange.map { formatter.formatPointChange($0, minStep: quote.minStep) })
+        addInfoRow(key: .minStep, title: L10n.QuoteDetail.minStep,
                    value: quote.minStep.map { "\($0)" })
     }
 
     private func updateDynamicContent(with quote: Quote) {
         // Price
-        priceLabel.text = QuoteFormatter.formatPrice(quote.lastTradePrice, minStep: quote.minStep)
+        priceLabel.text = formatter.formatPrice(quote.lastTradePrice, minStep: quote.minStep)
 
         // Change
-        let percentText = QuoteFormatter.formatPercentChange(quote.percentChange)
-        let pointText = QuoteFormatter.formatPointChange(quote.pointChange, minStep: quote.minStep)
+        let percentText = formatter.formatPercentChange(quote.percentChange)
+        let pointText = formatter.formatPointChange(quote.pointChange, minStep: quote.minStep)
         changeLabel.text = "\(percentText)  ( \(pointText) )"
-        changeLabel.textColor = QuoteFormatter.color(for: quote.changeDirection)
+        changeLabel.textColor = formatter.color(for: quote.changeDirection)
 
         // Update info row values
-        infoValueLabels["price"]?.text = quote.lastTradePrice.map {
-            QuoteFormatter.formatPrice($0, minStep: quote.minStep)
+        infoValueLabels[.lastTradePrice]?.text = quote.lastTradePrice.map {
+            formatter.formatPrice($0, minStep: quote.minStep)
         }
-        infoValueLabels["pcp"]?.text = quote.percentChange.map {
-            QuoteFormatter.formatPercentChange($0)
+        infoValueLabels[.percentChange]?.text = quote.percentChange.map {
+            formatter.formatPercentChange($0)
         }
-        infoValueLabels["chg"]?.text = quote.pointChange.map {
-            QuoteFormatter.formatPointChange($0, minStep: quote.minStep)
+        infoValueLabels[.pointChange]?.text = quote.pointChange.map {
+            formatter.formatPointChange($0, minStep: quote.minStep)
         }
 
         // Name/exchange might update too
@@ -196,8 +198,8 @@ final class QuoteDetailViewController: UIViewController {
             nameParts.append(name)
         }
         nameLabel.text = nameParts.joined(separator: " | ")
-        infoValueLabels["exchange"]?.text = quote.lastTradeExchange
-        infoValueLabels["name"]?.text = quote.name
+        infoValueLabels[.lastTradeExchange]?.text = quote.lastTradeExchange
+        infoValueLabels[.name]?.text = quote.name
     }
 
     private func loadLogo() {
@@ -207,7 +209,7 @@ final class QuoteDetailViewController: UIViewController {
         }
     }
 
-    private func addInfoRow(key: String, title: String, value: String?) {
+    private func addInfoRow(key: QuoteKey, title: String, value: String?) {
         guard let value else { return }
 
         let row = UIStackView()

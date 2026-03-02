@@ -8,6 +8,8 @@ import XCTest
 
 final class QuoteTests: XCTestCase {
 
+    private let mapper = QuoteMapper()
+
     // MARK: - Init from dictionary
 
     func testInitFromFullDictionary() {
@@ -21,7 +23,7 @@ final class QuoteTests: XCTestCase {
             "min_step": 0.01
         ]
 
-        let quote = Quote(dictionary: dict)
+        let quote = mapper.quote(from: dict)
 
         XCTAssertNotNil(quote)
         XCTAssertEqual(quote?.ticker, "AAPL.US")
@@ -35,17 +37,17 @@ final class QuoteTests: XCTestCase {
 
     func testInitReturnsNilForMissingTicker() {
         let dict: [String: Any] = ["ltp": 100.0]
-        XCTAssertNil(Quote(dictionary: dict))
+        XCTAssertNil(mapper.quote(from: dict))
     }
 
     func testInitReturnsNilForEmptyTicker() {
         let dict: [String: Any] = ["c": "", "ltp": 100.0]
-        XCTAssertNil(Quote(dictionary: dict))
+        XCTAssertNil(mapper.quote(from: dict))
     }
 
     func testInitWithMinimalDictionary() {
         let dict: [String: Any] = ["c": "SBER"]
-        let quote = Quote(dictionary: dict)
+        let quote = mapper.quote(from: dict)
 
         XCTAssertNotNil(quote)
         XCTAssertEqual(quote?.ticker, "SBER")
@@ -57,17 +59,17 @@ final class QuoteTests: XCTestCase {
         XCTAssertNil(quote?.minStep)
     }
 
-    // MARK: - Merge
+    // MARK: - QuoteMapper Merge
 
-    func testMergeUpdatesOnlyProvidedFields() {
-        var quote = Quote(dictionary: [
+    func testMapperMergeUpdatesOnlyProvidedFields() {
+        var quote = mapper.quote(from: [
             "c": "GAZP",
             "ltp": 200.0,
             "pcp": 1.5,
             "name": "Gazprom"
         ])!
 
-        quote.merge(from: ["ltp": 201.0, "chg": 1.0])
+        quote = mapper.merge(quote, with: ["ltp": 201.0, "chg": 1.0])
 
         XCTAssertEqual(quote.lastTradePrice, 201.0)
         XCTAssertEqual(quote.pointChange, 1.0)
@@ -76,10 +78,10 @@ final class QuoteTests: XCTestCase {
         XCTAssertEqual(quote.name, "Gazprom")
     }
 
-    func testMergeAllFields() {
+    func testMapperMergeAllFields() {
         var quote = Quote(ticker: "TEST")
 
-        quote.merge(from: [
+        quote = mapper.merge(quote, with: [
             "ltp": 50.0,
             "pcp": -0.5,
             "chg": -0.25,
@@ -100,19 +102,19 @@ final class QuoteTests: XCTestCase {
 
     func testChangeDirectionUp() {
         var quote = Quote(ticker: "X")
-        quote.merge(from: ["pcp": 1.5])
+        quote.percentChange = 1.5
         XCTAssertEqual(quote.changeDirection, .up)
     }
 
     func testChangeDirectionDown() {
         var quote = Quote(ticker: "X")
-        quote.merge(from: ["pcp": -0.3])
+        quote.percentChange = -0.3
         XCTAssertEqual(quote.changeDirection, .down)
     }
 
     func testChangeDirectionNone() {
         var quote = Quote(ticker: "X")
-        quote.merge(from: ["pcp": 0.0])
+        quote.percentChange = 0.0
         XCTAssertEqual(quote.changeDirection, .none)
     }
 

@@ -1,0 +1,13 @@
+/* Quotes screen */
+"quotes.title" = "Quotes";
+"quotes.retry" = "Retry";
+"quotes.connectionFailed" = "Connection failed";
+
+/* Quote detail screen */
+"quoteDetail.ticker" = "Ticker";
+"quoteDetail.exchange" = "Exchange";
+"quoteDetail.name" = "Name";
+"quoteDetail.lastTradePrice" = "Last Trade Price";
+"quoteDetail.changePercent" = "Change (%)";
+"quoteDetail.changePoints" = "Change (pts)";
+"quoteDetail.minStep" = "Min Step";

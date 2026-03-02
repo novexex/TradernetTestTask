@@ -76,6 +76,7 @@ final class QuoteCell: UITableViewCell {
     private var currentTicker: String?
     private var imageLoadTask: URLSessionDataTask?
     private var imageLoader: ImageLoading?
+    private var formatter: QuoteFormatting?
 
     // MARK: - Init
 
@@ -153,8 +154,9 @@ final class QuoteCell: UITableViewCell {
 
     // MARK: - Configure
 
-    func configure(with quote: Quote, imageLoader: ImageLoading) {
+    func configure(with quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting) {
         self.imageLoader = imageLoader
+        self.formatter = formatter
         currentTicker = quote.ticker
         tickerLabel.text = quote.ticker
 
@@ -170,9 +172,9 @@ final class QuoteCell: UITableViewCell {
 
         // Percent badge
         if quote.percentChange != nil {
-            let percentText = QuoteFormatter.formatPercentChange(quote.percentChange)
+            let percentText = formatter.formatPercentChange(quote.percentChange)
             percentBadge.text = "  \(percentText)  "
-            let badgeColor = QuoteFormatter.color(for: quote.changeDirection)
+            let badgeColor = formatter.color(for: quote.changeDirection)
             percentBadge.backgroundColor = badgeColor
             percentBadge.isHidden = false
         } else {
@@ -182,7 +184,7 @@ final class QuoteCell: UITableViewCell {
         }
 
         // Price + change
-        priceChangeLabel.text = QuoteFormatter.formatPriceWithChange(
+        priceChangeLabel.text = formatter.formatPriceWithChange(
             price: quote.lastTradePrice,
             change: quote.pointChange,
             minStep: quote.minStep
