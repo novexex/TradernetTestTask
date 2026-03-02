@@ -10,7 +10,7 @@ protocol ImageLoading: AnyObject {
     func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) -> URLSessionDataTask?
 }
 
-final class ImageLoader: ImageLoading {
+final class ImageLoader {
 
     private let cache = NSCache<NSURL, UIImage>()
     private let session: URLSession
@@ -18,6 +18,11 @@ final class ImageLoader: ImageLoading {
     init(session: URLSession = .shared) {
         self.session = session
     }
+}
+
+// MARK: - ImageLoading
+
+extension ImageLoader: ImageLoading {
 
     @discardableResult
     func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) -> URLSessionDataTask? {

@@ -12,7 +12,7 @@ protocol QuotesViewModelDelegate: AnyObject {
     func quotesDidConnect()
 }
 
-final class QuotesViewModel: WebSocketServiceDelegate {
+final class QuotesViewModel {
 
     weak var delegate: QuotesViewModelDelegate?
 
@@ -45,16 +45,22 @@ final class QuotesViewModel: WebSocketServiceDelegate {
         service.connect()
     }
 
-    // MARK: - Private
+    // MARK: - Quote Observation
 
-    private func initializeQuotes() {
-        quotes = tickers.map { Quote(ticker: $0) }
-        for (index, ticker) in tickers.enumerated() {
-            tickerIndexMap[ticker] = index
-        }
+    func observeQuote(for ticker: String, handler: @escaping (Quote) -> Void) -> UUID {
+        let id = UUID()
+        quoteObservers[id] = (ticker: ticker, handler: handler)
+        return id
     }
 
-    // MARK: - WebSocketServiceDelegate
+    func removeObservation(_ id: UUID) {
+        quoteObservers.removeValue(forKey: id)
+    }
+}
+
+// MARK: - WebSocketServiceDelegate
+
+extension QuotesViewModel: WebSocketServiceDelegate {
 
     func webSocketDidConnect() {
         service.subscribe(to: tickers)
@@ -81,16 +87,16 @@ final class QuotesViewModel: WebSocketServiceDelegate {
     func webSocketDidExhaustRetries() {
         delegate?.quotesDidFailToConnect()
     }
+}
 
-    // MARK: - Quote Observation
+// MARK: - Private
 
-    func observeQuote(for ticker: String, handler: @escaping (Quote) -> Void) -> UUID {
-        let id = UUID()
-        quoteObservers[id] = (ticker: ticker, handler: handler)
-        return id
-    }
+private extension QuotesViewModel {
 
-    func removeObservation(_ id: UUID) {
-        quoteObservers.removeValue(forKey: id)
+    func initializeQuotes() {
+        quotes = tickers.map { Quote(ticker: $0) }
+        for (index, ticker) in tickers.enumerated() {
+            tickerIndexMap[ticker] = index
+        }
     }
 }

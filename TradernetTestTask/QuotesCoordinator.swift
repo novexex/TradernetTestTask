@@ -9,7 +9,7 @@ protocol QuotesCoordinating: AnyObject {
     func showDetail(for quote: Quote)
 }
 
-final class QuotesCoordinator: QuotesCoordinating {
+final class QuotesCoordinator {
 
     private weak var navigationController: UINavigationController?
     private let imageLoader: ImageLoading
@@ -24,6 +24,11 @@ final class QuotesCoordinator: QuotesCoordinating {
         self.logoURLProvider = logoURLProvider
         self.viewModel = viewModel
     }
+}
+
+// MARK: - QuotesCoordinating
+
+extension QuotesCoordinator: QuotesCoordinating {
 
     func showDetail(for quote: Quote) {
         let detailVC = QuoteDetailViewController(quote: quote, imageLoader: imageLoader, formatter: formatter, logoURLProvider: logoURLProvider, viewModel: viewModel)

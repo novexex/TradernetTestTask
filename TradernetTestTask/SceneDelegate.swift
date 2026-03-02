@@ -7,12 +7,17 @@
 
 import UIKit
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+class SceneDelegate: UIResponder {
 
     var window: UIWindow?
     private var coordinator: QuotesCoordinator?
     private var socketService: TradernetSocketService?
     private var viewModel: QuotesViewModel?
+}
+
+// MARK: - UIWindowSceneDelegate
+
+extension SceneDelegate: UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }

@@ -50,8 +50,6 @@ struct QuoteFormatter: QuoteFormatting {
         return "\(priceStr) ( \(changeStr) )"
     }
 
-    // MARK: - Helpers
-
     func decimalPlaces(for minStep: Double?) -> Int {
         guard let minStep = minStep, minStep > 0 else { return 2 }
         let str = String(minStep)
@@ -62,10 +60,13 @@ struct QuoteFormatter: QuoteFormatting {
         }
         return 0
     }
+}
 
-    // MARK: - Private
+// MARK: - Private
 
-    private func makeDecimalFormatter(minFraction: Int, maxFraction: Int) -> NumberFormatter {
+private extension QuoteFormatter {
+
+    func makeDecimalFormatter(minFraction: Int, maxFraction: Int) -> NumberFormatter {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = " "
@@ -76,7 +77,7 @@ struct QuoteFormatter: QuoteFormatting {
         return formatter
     }
 
-    private func formatDecimal(_ value: Double, minFraction: Int, maxFraction: Int) -> String {
+    func formatDecimal(_ value: Double, minFraction: Int, maxFraction: Int) -> String {
         let formatter = makeDecimalFormatter(minFraction: minFraction, maxFraction: maxFraction)
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }

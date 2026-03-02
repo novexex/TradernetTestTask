@@ -104,9 +104,55 @@ final class QuoteCell: UITableViewCell {
         subtitleLabel.text = nil
     }
 
-    // MARK: - Layout
+    // MARK: - Configure
 
-    private func setupLayout() {
+    func configure(with quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting, logoURLProvider: LogoURLProviding) {
+        self.imageLoader = imageLoader
+        self.formatter = formatter
+        self.logoURLProvider = logoURLProvider
+        currentTicker = quote.ticker
+        tickerLabel.text = quote.ticker
+
+        // Subtitle: exchange | name
+        var subtitleParts: [String] = []
+        if let exchange = quote.lastTradeExchange, !exchange.isEmpty {
+            subtitleParts.append(exchange)
+        }
+        if let name = quote.name, !name.isEmpty {
+            subtitleParts.append(name)
+        }
+        subtitleLabel.text = subtitleParts.joined(separator: " | ")
+
+        // Percent badge
+        if quote.percentChange != nil {
+            let percentText = formatter.formatPercentChange(quote.percentChange)
+            percentBadge.text = "  \(percentText)  "
+            let badgeColor = Colors.color(for: quote.changeDirection)
+            percentBadge.backgroundColor = badgeColor
+            percentBadge.isHidden = false
+        } else {
+            percentBadge.text = nil
+            percentBadge.backgroundColor = .clear
+            percentBadge.isHidden = true
+        }
+
+        // Price + change
+        priceChangeLabel.text = formatter.formatPriceWithChange(
+            price: quote.lastTradePrice,
+            change: quote.pointChange,
+            minStep: quote.minStep
+        )
+
+        // Load logo
+        loadLogo(for: quote.ticker)
+    }
+}
+
+// MARK: - Private
+
+private extension QuoteCell {
+
+    func setupLayout() {
         tickerRow.addArrangedSubview(logoImageView)
         tickerRow.addArrangedSubview(tickerLabel)
 
@@ -153,52 +199,7 @@ final class QuoteCell: UITableViewCell {
         }
     }
 
-    // MARK: - Configure
-
-    func configure(with quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting, logoURLProvider: LogoURLProviding) {
-        self.imageLoader = imageLoader
-        self.formatter = formatter
-        self.logoURLProvider = logoURLProvider
-        currentTicker = quote.ticker
-        tickerLabel.text = quote.ticker
-
-        // Subtitle: exchange | name
-        var subtitleParts: [String] = []
-        if let exchange = quote.lastTradeExchange, !exchange.isEmpty {
-            subtitleParts.append(exchange)
-        }
-        if let name = quote.name, !name.isEmpty {
-            subtitleParts.append(name)
-        }
-        subtitleLabel.text = subtitleParts.joined(separator: " | ")
-
-        // Percent badge
-        if quote.percentChange != nil {
-            let percentText = formatter.formatPercentChange(quote.percentChange)
-            percentBadge.text = "  \(percentText)  "
-            let badgeColor = Colors.color(for: quote.changeDirection)
-            percentBadge.backgroundColor = badgeColor
-            percentBadge.isHidden = false
-        } else {
-            percentBadge.text = nil
-            percentBadge.backgroundColor = .clear
-            percentBadge.isHidden = true
-        }
-
-        // Price + change
-        priceChangeLabel.text = formatter.formatPriceWithChange(
-            price: quote.lastTradePrice,
-            change: quote.pointChange,
-            minStep: quote.minStep
-        )
-
-        // Load logo
-        loadLogo(for: quote.ticker)
-    }
-
-    // MARK: - Logo Loading
-
-    private func loadLogo(for ticker: String) {
+    func loadLogo(for ticker: String) {
         guard let url = logoURLProvider?.logoURL(for: ticker) else { return }
         imageLoadTask = imageLoader?.loadImage(from: url) { [weak self] image in
             guard let self, currentTicker == ticker, let image else { return }

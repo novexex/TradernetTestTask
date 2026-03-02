@@ -5,7 +5,7 @@
 
 import Foundation
 
-final class TradernetSocketService: WebSocketService {
+final class TradernetSocketService {
 
     // MARK: - Event Names
 
@@ -69,7 +69,16 @@ final class TradernetSocketService: WebSocketService {
         self.activityTimeout = activityTimeout
     }
 
-    // MARK: - WebSocketService
+    deinit {
+        cancelReconnect()
+        cancelTimeouts()
+        tearDownConnection()
+    }
+}
+
+// MARK: - WebSocketService
+
+extension TradernetSocketService: WebSocketService {
 
     func connect() {
         guard state == .disconnected || state == .disconnectedManually else { return }
@@ -93,16 +102,15 @@ final class TradernetSocketService: WebSocketService {
             pendingTickers = tickers
         }
     }
+}
 
-    deinit {
-        cancelReconnect()
-        cancelTimeouts()
-        tearDownConnection()
-    }
+// MARK: - Private
 
-    // MARK: - Connection Lifecycle
+private extension TradernetSocketService {
 
-    private func openConnection() {
+    // MARK: Connection Lifecycle
+
+    func openConnection() {
         tearDownConnection()
 
         guard let url = URL(string: Constants.webSocketURL) else {
@@ -120,7 +128,7 @@ final class TradernetSocketService: WebSocketService {
         scheduleConnectionTimeout()
     }
 
-    private func tearDownConnection() {
+    func tearDownConnection() {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         urlSession?.invalidateAndCancel()
@@ -128,9 +136,9 @@ final class TradernetSocketService: WebSocketService {
         sessionDelegate = nil
     }
 
-    // MARK: - Listening
+    // MARK: Listening
 
-    private func listen() {
+    func listen() {
         webSocketTask?.receive { [weak self] result in
             guard let self else { return }
             switch result {
@@ -151,9 +159,9 @@ final class TradernetSocketService: WebSocketService {
         }
     }
 
-    // MARK: - Message Handling
+    // MARK: Message Handling
 
-    private func handleMessage(_ text: String) {
+    func handleMessage(_ text: String) {
         switch parser.detectFrame(text) {
         case .ping:
             sendRaw(parser.pongFrame)
@@ -166,7 +174,7 @@ final class TradernetSocketService: WebSocketService {
         }
     }
 
-    private func handleEventPayload(_ payload: String) {
+    func handleEventPayload(_ payload: String) {
         guard let parsed = parser.parse(payload) else { return }
 
         switch parsed.event {
@@ -190,9 +198,9 @@ final class TradernetSocketService: WebSocketService {
         }
     }
 
-    // MARK: - Disconnect & Reconnect
+    // MARK: Disconnect & Reconnect
 
-    private func handleDisconnect(error: Error?) {
+    func handleDisconnect(error: Error?) {
         guard state != .disconnectedManually else { return }
         cancelTimeouts()
         state = .disconnected
@@ -200,7 +208,7 @@ final class TradernetSocketService: WebSocketService {
         scheduleReconnect()
     }
 
-    private func scheduleReconnect() {
+    func scheduleReconnect() {
         guard reconnectStrategy.canRetry(attempt: retryCount) else {
             delegate?.webSocketDidExhaustRetries()
             return
@@ -217,14 +225,14 @@ final class TradernetSocketService: WebSocketService {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
-    private func cancelReconnect() {
+    func cancelReconnect() {
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
     }
 
-    // MARK: - Timeouts
+    // MARK: Timeouts
 
-    private func scheduleConnectionTimeout() {
+    func scheduleConnectionTimeout() {
         cancelConnectionTimeout()
         let workItem = DispatchWorkItem { [weak self] in
             guard let self, self.state == .connecting else { return }
@@ -234,12 +242,12 @@ final class TradernetSocketService: WebSocketService {
         DispatchQueue.main.asyncAfter(deadline: .now() + connectionTimeout, execute: workItem)
     }
 
-    private func cancelConnectionTimeout() {
+    func cancelConnectionTimeout() {
         connectionTimeoutWorkItem?.cancel()
         connectionTimeoutWorkItem = nil
     }
 
-    private func resetActivityTimeout() {
+    func resetActivityTimeout() {
         cancelActivityTimeout()
         guard state == .connected || state == .connecting else { return }
         let workItem = DispatchWorkItem { [weak self] in
@@ -250,26 +258,26 @@ final class TradernetSocketService: WebSocketService {
         DispatchQueue.main.asyncAfter(deadline: .now() + activityTimeout, execute: workItem)
     }
 
-    private func cancelActivityTimeout() {
+    func cancelActivityTimeout() {
         activityTimeoutWorkItem?.cancel()
         activityTimeoutWorkItem = nil
     }
 
-    private func cancelTimeouts() {
+    func cancelTimeouts() {
         cancelConnectionTimeout()
         cancelActivityTimeout()
     }
 
-    // MARK: - Sending
+    // MARK: Sending
 
-    private func sendSubscription(_ tickers: [String]) {
+    func sendSubscription(_ tickers: [String]) {
         guard let data = try? JSONSerialization.data(
             withJSONObject: ["quotes", tickers], options: []
         ), let jsonString = String(data: data, encoding: .utf8) else { return }
         sendRaw(jsonString)
     }
 
-    private func sendRaw(_ text: String) {
+    func sendRaw(_ text: String) {
         webSocketTask?.send(.string(text)) { _ in }
     }
 }

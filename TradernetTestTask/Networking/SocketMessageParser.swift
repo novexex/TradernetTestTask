@@ -25,11 +25,16 @@ protocol SocketMessageParsing {
     func parse(_ payload: String) -> ParsedMessage?
 }
 
-struct SocketMessageParser: SocketMessageParsing {
+struct SocketMessageParser {
 
     let pingFrame = "2"
     let pongFrame = "3"
     private let socketIOPrefix = "42"
+}
+
+// MARK: - SocketMessageParsing
+
+extension SocketMessageParser: SocketMessageParsing {
 
     func detectFrame(_ text: String) -> FrameType {
         if text == pingFrame { return .ping }

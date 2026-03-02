@@ -103,10 +103,13 @@ final class QuoteDetailViewController: UIViewController {
             self?.updateDynamicContent(with: updatedQuote)
         }
     }
+}
 
-    // MARK: - Setup
+// MARK: - Private
 
-    private func setupLayout() {
+private extension QuoteDetailViewController {
+
+    func setupLayout() {
         let headerStack = UIStackView(arrangedSubviews: [logoImageView, tickerLabel, nameLabel])
         headerStack.axis = .vertical
         headerStack.spacing = 8
@@ -139,9 +142,7 @@ final class QuoteDetailViewController: UIViewController {
         }
     }
 
-    // MARK: - Configure
-
-    private func configure(with quote: Quote) {
+    func configure(with quote: Quote) {
         tickerLabel.text = quote.ticker
 
         // Name
@@ -170,7 +171,7 @@ final class QuoteDetailViewController: UIViewController {
                    value: quote.minStep.map { "\($0)" })
     }
 
-    private func updateDynamicContent(with quote: Quote) {
+    func updateDynamicContent(with quote: Quote) {
         // Price
         priceLabel.text = formatter.formatPrice(quote.lastTradePrice, minStep: quote.minStep)
 
@@ -204,14 +205,14 @@ final class QuoteDetailViewController: UIViewController {
         infoValueLabels[.name]?.text = quote.name
     }
 
-    private func loadLogo() {
+    func loadLogo() {
         guard let url = logoURLProvider.logoURL(for: quote.ticker) else { return }
         imageLoader.loadImage(from: url) { [weak self] image in
             self?.logoImageView.image = image
         }
     }
 
-    private func addInfoRow(key: QuoteKey, title: String, value: String?) {
+    func addInfoRow(key: QuoteKey, title: String, value: String?) {
         guard let value else { return }
 
         let row = UIStackView()

@@ -68,10 +68,13 @@ final class QuotesViewController: UIViewController {
             viewModel.stop()
         }
     }
+}
 
-    // MARK: - Setup
+// MARK: - Private
 
-    private func configureNavigationBar() {
+private extension QuotesViewController {
+
+    func configureNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = Colors.background
@@ -80,7 +83,7 @@ final class QuotesViewController: UIViewController {
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
 
-    private func setupTableView() {
+    func setupTableView() {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(QuoteCell.self, forCellReuseIdentifier: QuoteCell.reuseIdentifier)
@@ -94,7 +97,7 @@ final class QuotesViewController: UIViewController {
         }
     }
 
-    private func setupStatusView() {
+    func setupStatusView() {
         let stack = UIStackView(arrangedSubviews: [statusLabel, retryButton])
         stack.axis = .vertical
         stack.spacing = 12
@@ -110,7 +113,7 @@ final class QuotesViewController: UIViewController {
         retryButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
     }
 
-    @objc private func retryTapped() {
+    @objc func retryTapped() {
         statusLabel.isHidden = true
         retryButton.isHidden = true
         viewModel.retry()
