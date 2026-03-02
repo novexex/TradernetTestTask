@@ -12,12 +12,12 @@ protocol ImageLoading: AnyObject {
 
 final class ImageLoader: ImageLoading {
 
-    static let shared = ImageLoader()
-
     private let cache = NSCache<NSURL, UIImage>()
-    private let session = URLSession.shared
+    private let session: URLSession
 
-    private init() {}
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     @discardableResult
     func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) -> URLSessionDataTask? {

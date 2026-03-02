@@ -21,7 +21,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let navigationController = UINavigationController()
 
         // Composition Root: assemble the dependency graph
-        let imageLoader = ImageLoader.shared
+        let imageLoader = ImageLoader()
         let socketService = TradernetSocketService()
         let viewModel = QuotesViewModel(service: socketService)
         let coordinator = QuotesCoordinator(navigationController: navigationController, imageLoader: imageLoader, viewModel: viewModel)
