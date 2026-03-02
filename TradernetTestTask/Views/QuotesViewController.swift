@@ -33,13 +33,6 @@ final class QuotesViewController: UIViewController {
         return button
     }()
 
-    private let activityIndicator: UIActivityIndicatorView = {
-        let indicator = UIActivityIndicatorView(style: .medium)
-        indicator.color = Colors.subtitle
-        indicator.hidesWhenStopped = true
-        return indicator
-    }()
-
     // MARK: - Init
 
     init(viewModel: QuotesViewModel, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), coordinator: QuotesCoordinating?) {
@@ -100,7 +93,7 @@ final class QuotesViewController: UIViewController {
     }
 
     private func setupStatusView() {
-        let stack = UIStackView(arrangedSubviews: [activityIndicator, statusLabel, retryButton])
+        let stack = UIStackView(arrangedSubviews: [statusLabel, retryButton])
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
@@ -113,13 +106,11 @@ final class QuotesViewController: UIViewController {
         }
 
         retryButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
-        activityIndicator.startAnimating()
     }
 
     @objc private func retryTapped() {
         statusLabel.isHidden = true
         retryButton.isHidden = true
-        activityIndicator.startAnimating()
         viewModel.retry()
     }
 }
@@ -161,7 +152,6 @@ extension QuotesViewController: UITableViewDelegate {
 extension QuotesViewController: QuotesViewModelDelegate {
 
     func quotesDidUpdate(at indexes: [Int]) {
-        activityIndicator.stopAnimating()
         statusLabel.isHidden = true
         retryButton.isHidden = true
 
@@ -179,14 +169,12 @@ extension QuotesViewController: QuotesViewModelDelegate {
     }
 
     func quotesDidFailToConnect() {
-        activityIndicator.stopAnimating()
         statusLabel.text = L10n.Quotes.connectionFailed
         statusLabel.isHidden = false
         retryButton.isHidden = false
     }
 
     func quotesDidConnect() {
-        activityIndicator.stopAnimating()
         statusLabel.isHidden = true
         retryButton.isHidden = true
     }

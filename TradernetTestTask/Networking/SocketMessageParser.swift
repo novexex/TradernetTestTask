@@ -5,32 +5,33 @@
 
 import Foundation
 
-enum SocketMessageParser {
+struct ParsedMessage {
+    let event: String
+    let data: Any?
+}
 
-    struct ParsedMessage {
-        let event: String
-        let data: Any?
-    }
+enum FrameType {
+    case ping
+    case pong
+    case socketIOEvent(payload: String)
+    case rawJSONEvent(payload: String)
+    case unknown
+}
 
-    // MARK: - Engine.IO Frame Types
+protocol SocketMessageParsing {
+    var pingFrame: String { get }
+    var pongFrame: String { get }
+    func detectFrame(_ text: String) -> FrameType
+    func parse(_ payload: String) -> ParsedMessage?
+}
 
-    enum FrameType {
-        case ping
-        case pong
-        case socketIOEvent(payload: String)
-        case rawJSONEvent(payload: String)
-        case unknown
-    }
+struct SocketMessageParser: SocketMessageParsing {
 
-    // MARK: - Engine.IO Constants
+    let pingFrame = "2"
+    let pongFrame = "3"
+    private let socketIOPrefix = "42"
 
-    static let pingFrame = "2"
-    static let pongFrame = "3"
-    private static let socketIOPrefix = "42"
-
-    // MARK: - Frame Detection
-
-    static func detectFrame(_ text: String) -> FrameType {
+    func detectFrame(_ text: String) -> FrameType {
         if text == pingFrame { return .ping }
         if text == pongFrame { return .pong }
         if text.hasPrefix(socketIOPrefix) {
@@ -42,9 +43,7 @@ enum SocketMessageParser {
         return .unknown
     }
 
-    // MARK: - Payload Parsing
-
-    static func parse(_ payload: String) -> ParsedMessage? {
+    func parse(_ payload: String) -> ParsedMessage? {
         guard let data = payload.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
               let event = array.first as? String else {

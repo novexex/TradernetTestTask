@@ -5,7 +5,14 @@
 
 import Foundation
 
-final class TradernetSocketService: NSObject, WebSocketService {
+final class TradernetSocketService: WebSocketService {
+
+    // MARK: - Event Names
+
+    private enum Event {
+        static let quote = "q"
+        static let userData = "userData"
+    }
 
     weak var delegate: WebSocketServiceDelegate?
 
@@ -25,6 +32,7 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private var state: ConnectionState = .disconnected
     private var retryCount = 0
+    private let parser: SocketMessageParsing
     private let reconnectStrategy: ReconnectStrategy
     private let connectionTimeout: TimeInterval
     private let activityTimeout: TimeInterval
@@ -42,13 +50,8 @@ final class TradernetSocketService: NSObject, WebSocketService {
         }
 
         func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
-                        didOpenWithProtocol protocol: String?) {
-            target?.urlSession(session, webSocketTask: webSocketTask, didOpenWithProtocol: `protocol`)
-        }
-
-        func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                         didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-            target?.urlSession(session, webSocketTask: webSocketTask, didCloseWith: closeCode, reason: reason)
+            target?.handleDisconnect(error: nil)
         }
     }
 
@@ -56,13 +59,14 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     // MARK: - Init
 
-    init(reconnectStrategy: ReconnectStrategy = ReconnectStrategy(),
+    init(parser: SocketMessageParsing = SocketMessageParser(),
+         reconnectStrategy: ReconnectStrategy = ReconnectStrategy(),
          connectionTimeout: TimeInterval = 15,
          activityTimeout: TimeInterval = 45) {
+        self.parser = parser
         self.reconnectStrategy = reconnectStrategy
         self.connectionTimeout = connectionTimeout
         self.activityTimeout = activityTimeout
-        super.init()
     }
 
     // MARK: - WebSocketService
@@ -150,9 +154,9 @@ final class TradernetSocketService: NSObject, WebSocketService {
     // MARK: - Message Handling
 
     private func handleMessage(_ text: String) {
-        switch SocketMessageParser.detectFrame(text) {
+        switch parser.detectFrame(text) {
         case .ping:
-            sendRaw(SocketMessageParser.pongFrame)
+            sendRaw(parser.pongFrame)
         case .pong:
             break
         case .socketIOEvent(let payload), .rawJSONEvent(let payload):
@@ -163,14 +167,14 @@ final class TradernetSocketService: NSObject, WebSocketService {
     }
 
     private func handleEventPayload(_ payload: String) {
-        guard let parsed = SocketMessageParser.parse(payload) else { return }
+        guard let parsed = parser.parse(payload) else { return }
 
         switch parsed.event {
-        case "q":
+        case Event.quote:
             if let quoteData = parsed.data as? [String: Any] {
                 delegate?.webSocketDidReceiveQuote(data: quoteData)
             }
-        case "userData":
+        case Event.userData:
             if state != .connected {
                 state = .connected
                 retryCount = 0
@@ -266,24 +270,6 @@ final class TradernetSocketService: NSObject, WebSocketService {
     }
 
     private func sendRaw(_ text: String) {
-        webSocketTask?.send(.string(text)) { error in
-            if let error = error {
-                print("[WS] Send error: \(error)")
-            }
-        }
-    }
-}
-
-// MARK: - URLSessionWebSocketDelegate
-
-extension TradernetSocketService: URLSessionWebSocketDelegate {
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
-                    didOpenWithProtocol protocol: String?) {
-        // Wait for server's userData event before declaring connected
-    }
-
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
-                    didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        handleDisconnect(error: nil)
+        webSocketTask?.send(.string(text)) { _ in }
     }
 }
