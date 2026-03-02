@@ -76,7 +76,6 @@ final class QuoteCell: UITableViewCell {
     private var currentTicker: String?
     private var imageLoadTask: URLSessionDataTask?
     private var imageLoader: ImageLoading?
-    private let quotir = Quotir()
 
     // MARK: - Init
 
@@ -99,7 +98,6 @@ final class QuoteCell: UITableViewCell {
         logoImageView.isHidden = true
         currentTicker = nil
         percentBadge.isHidden = true
-        quotir.clearRestingColor(for: percentBadge)
         priceChangeLabel.text = nil
         subtitleLabel.text = nil
     }
@@ -155,7 +153,7 @@ final class QuoteCell: UITableViewCell {
 
     // MARK: - Configure
 
-    func configure(with quote: Quote, direction: Quote.ChangeDirection?, imageLoader: ImageLoading) {
+    func configure(with quote: Quote, imageLoader: ImageLoading) {
         self.imageLoader = imageLoader
         currentTicker = quote.ticker
         tickerLabel.text = quote.ticker
@@ -189,11 +187,6 @@ final class QuoteCell: UITableViewCell {
             change: quote.pointChange,
             minStep: quote.minStep
         )
-
-        // Flash animation on update
-        if let direction = direction, direction != .none {
-            quotir.flash(view: percentBadge, direction: direction)
-        }
 
         // Load logo
         loadLogo(for: quote.ticker)

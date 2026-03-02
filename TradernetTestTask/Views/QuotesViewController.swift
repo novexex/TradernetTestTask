@@ -138,8 +138,7 @@ extension QuotesViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         let quote = viewModel.quotes[indexPath.row]
-        let direction = viewModel.changeDirections[quote.ticker]
-        cell.configure(with: quote, direction: direction, imageLoader: imageLoader)
+        cell.configure(with: quote, imageLoader: imageLoader)
         return cell
     }
 }
@@ -168,8 +167,7 @@ extension QuotesViewController: QuotesViewModelDelegate {
             let indexPath = IndexPath(row: index, section: 0)
             if let cell = tableView.cellForRow(at: indexPath) as? QuoteCell {
                 let quote = viewModel.quotes[index]
-                let direction = viewModel.changeDirections[quote.ticker]
-                cell.configure(with: quote, direction: direction, imageLoader: imageLoader)
+                cell.configure(with: quote, imageLoader: imageLoader)
             }
         }
     }

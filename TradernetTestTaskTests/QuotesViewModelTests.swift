@@ -101,52 +101,6 @@ final class QuotesViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.quotes[0].name, "Apple")        // Preserved
     }
 
-    // MARK: - Direction Detection
-
-    func testDetectDirectionUpFromNil() {
-        let direction = viewModel.detectDirection(oldPcp: nil, newPcp: 1.5)
-        XCTAssertEqual(direction, .up)
-    }
-
-    func testDetectDirectionDownFromNil() {
-        let direction = viewModel.detectDirection(oldPcp: nil, newPcp: -0.5)
-        XCTAssertEqual(direction, .down)
-    }
-
-    func testDetectDirectionUpFromIncrease() {
-        let direction = viewModel.detectDirection(oldPcp: 1.0, newPcp: 2.0)
-        XCTAssertEqual(direction, .up)
-    }
-
-    func testDetectDirectionDownFromDecrease() {
-        let direction = viewModel.detectDirection(oldPcp: 2.0, newPcp: 1.0)
-        XCTAssertEqual(direction, .down)
-    }
-
-    func testDetectDirectionNoneWhenSame() {
-        let direction = viewModel.detectDirection(oldPcp: 1.0, newPcp: 1.0)
-        XCTAssertEqual(direction, .none)
-    }
-
-    func testDetectDirectionNoneForNilNew() {
-        let direction = viewModel.detectDirection(oldPcp: 1.0, newPcp: nil)
-        XCTAssertEqual(direction, .none)
-    }
-
-    func testChangeDirectionStoredOnUpdate() {
-        mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
-        XCTAssertEqual(viewModel.changeDirections["AAPL"], .up)
-    }
-
-    func testChangeDirectionResetsToNoneWhenUnchanged() {
-        mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
-        XCTAssertEqual(viewModel.changeDirections["AAPL"], .up)
-
-        // Same pcp — direction should reset to .none
-        mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
-        XCTAssertEqual(viewModel.changeDirections["AAPL"], .none)
-    }
-
     // MARK: - Reconnection
 
     func testResubscribesAfterReconnect() {
