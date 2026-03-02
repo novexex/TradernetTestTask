@@ -8,6 +8,8 @@ import Foundation
 protocol QuotesViewModelDelegate: AnyObject {
     func quotesDidUpdate(at indexes: [Int])
     func quotesDidReload()
+    func quotesDidFailToConnect()
+    func quotesDidConnect()
 }
 
 final class QuotesViewModel: WebSocketServiceDelegate {
@@ -25,6 +27,9 @@ final class QuotesViewModel: WebSocketServiceDelegate {
     /// Stores the latest change direction per ticker for cell animation
     private(set) var changeDirections: [String: Quote.ChangeDirection] = [:]
 
+    /// Per-ticker observers for detail screen live updates
+    private var quoteObservers: [UUID: (ticker: String, handler: (Quote) -> Void)] = [:]
+
     init(service: WebSocketService, tickers: [String] = Constants.tickers) {
         self.service = service
         self.tickers = tickers
@@ -40,6 +45,10 @@ final class QuotesViewModel: WebSocketServiceDelegate {
         service.disconnect()
     }
 
+    func retry() {
+        service.connect()
+    }
+
     // MARK: - Private
 
     private func initializeQuotes() {
@@ -53,6 +62,7 @@ final class QuotesViewModel: WebSocketServiceDelegate {
 
     func webSocketDidConnect() {
         service.subscribe(to: tickers)
+        delegate?.quotesDidConnect()
     }
 
     func webSocketDidReceiveQuote(data: [String: Any]) {
@@ -70,10 +80,31 @@ final class QuotesViewModel: WebSocketServiceDelegate {
         }
 
         delegate?.quotesDidUpdate(at: [index])
+
+        let updatedQuote = quotes[index]
+        for (_, observer) in quoteObservers where observer.ticker == ticker {
+            observer.handler(updatedQuote)
+        }
     }
 
     func webSocketDidDisconnect(error: Error?) {
         // ViewModel stays passive; TradernetSocketService auto-reconnects
+    }
+
+    func webSocketDidExhaustRetries() {
+        delegate?.quotesDidFailToConnect()
+    }
+
+    // MARK: - Quote Observation
+
+    func observeQuote(for ticker: String, handler: @escaping (Quote) -> Void) -> UUID {
+        let id = UUID()
+        quoteObservers[id] = (ticker: ticker, handler: handler)
+        return id
+    }
+
+    func removeObservation(_ id: UUID) {
+        quoteObservers.removeValue(forKey: id)
     }
 
     // MARK: - Direction Detection

@@ -43,4 +43,8 @@ final class MockWebSocketService: WebSocketService {
     func simulateDisconnect(error: Error? = nil) {
         delegate?.webSocketDidDisconnect(error: error)
     }
+
+    func simulateExhaustedRetries() {
+        delegate?.webSocketDidExhaustRetries()
+    }
 }

@@ -5,11 +5,11 @@
 
 import UIKit
 
-enum Quotir {
+final class Quotir {
 
-    private static var restingColors = NSMapTable<UIView, UIColor>.weakToStrongObjects()
+    private var restingColors = NSMapTable<UIView, UIColor>.weakToStrongObjects()
 
-    static func flash(view: UIView, direction: Quote.ChangeDirection) {
+    func flash(view: UIView, direction: Quote.ChangeDirection) {
         let color = QuoteFormatter.color(for: direction)
 
         // Store the resting color only on the first flash
@@ -30,5 +30,10 @@ enum Quotir {
                 self.restingColors.removeObject(forKey: view)
             }
         }
+    }
+
+    func clearRestingColor(for view: UIView) {
+        view.layer.removeAllAnimations()
+        restingColors.removeObject(forKey: view)
     }
 }

@@ -158,6 +158,25 @@ final class QuotesViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.quotes[0].lastTradePrice, 150.0)
         XCTAssertEqual(viewModel.quotes[0].name, "Apple")
     }
+
+    // MARK: - Error Propagation
+
+    func testExhaustedRetriesNotifiesDelegate() {
+        mockService.simulateExhaustedRetries()
+        XCTAssertTrue(delegateSpy.failToConnectCalled)
+    }
+
+    func testConnectNotifiesDelegateDidConnect() {
+        mockService.simulateConnect()
+        XCTAssertTrue(delegateSpy.didConnectCalled)
+    }
+
+    // MARK: - Retry
+
+    func testRetryCallsConnect() {
+        viewModel.retry()
+        XCTAssertEqual(mockService.connectCallCount, 1)
+    }
 }
 
 // MARK: - Delegate Spy
@@ -165,6 +184,8 @@ final class QuotesViewModelTests: XCTestCase {
 private final class ViewModelDelegateSpy: QuotesViewModelDelegate {
     var lastUpdatedIndexes: [Int]?
     var reloadCalled = false
+    var failToConnectCalled = false
+    var didConnectCalled = false
 
     func quotesDidUpdate(at indexes: [Int]) {
         lastUpdatedIndexes = indexes
@@ -172,5 +193,13 @@ private final class ViewModelDelegateSpy: QuotesViewModelDelegate {
 
     func quotesDidReload() {
         reloadCalled = true
+    }
+
+    func quotesDidFailToConnect() {
+        failToConnectCalled = true
+    }
+
+    func quotesDidConnect() {
+        didConnectCalled = true
     }
 }

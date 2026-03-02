@@ -13,6 +13,32 @@ final class QuotesViewController: UIViewController {
     private let imageLoader: ImageLoading
     private weak var coordinator: QuotesCoordinating?
 
+    private let statusLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = Colors.subtitle
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.isHidden = true
+        return label
+    }()
+
+    private let retryButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Retry", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.setTitleColor(Colors.green, for: .normal)
+        button.isHidden = true
+        return button
+    }()
+
+    private let activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.color = Colors.subtitle
+        indicator.hidesWhenStopped = true
+        return indicator
+    }()
+
     // MARK: - Init
 
     init(viewModel: QuotesViewModel, imageLoader: ImageLoading, coordinator: QuotesCoordinating?) {
@@ -34,6 +60,7 @@ final class QuotesViewController: UIViewController {
         title = "Quotes"
         configureNavigationBar()
         setupTableView()
+        setupStatusView()
         viewModel.delegate = self
         viewModel.start()
     }
@@ -68,6 +95,30 @@ final class QuotesViewController: UIViewController {
         tableView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+    }
+
+    private func setupStatusView() {
+        let stack = UIStackView(arrangedSubviews: [activityIndicator, statusLabel, retryButton])
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.alignment = .center
+
+        view.addSubview(stack)
+        stack.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.leading.greaterThanOrEqualToSuperview().offset(32)
+            make.trailing.lessThanOrEqualToSuperview().offset(-32)
+        }
+
+        retryButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
+        activityIndicator.startAnimating()
+    }
+
+    @objc private func retryTapped() {
+        statusLabel.isHidden = true
+        retryButton.isHidden = true
+        activityIndicator.startAnimating()
+        viewModel.retry()
     }
 }
 
@@ -109,11 +160,27 @@ extension QuotesViewController: UITableViewDelegate {
 extension QuotesViewController: QuotesViewModelDelegate {
 
     func quotesDidUpdate(at indexes: [Int]) {
+        activityIndicator.stopAnimating()
+        statusLabel.isHidden = true
+        retryButton.isHidden = true
         let indexPaths = indexes.map { IndexPath(row: $0, section: 0) }
         tableView.reloadRows(at: indexPaths, with: .none)
     }
 
     func quotesDidReload() {
         tableView.reloadData()
+    }
+
+    func quotesDidFailToConnect() {
+        activityIndicator.stopAnimating()
+        statusLabel.text = "Connection failed"
+        statusLabel.isHidden = false
+        retryButton.isHidden = false
+    }
+
+    func quotesDidConnect() {
+        activityIndicator.stopAnimating()
+        statusLabel.isHidden = true
+        retryButton.isHidden = true
     }
 }

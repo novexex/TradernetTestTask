@@ -9,6 +9,7 @@ protocol WebSocketServiceDelegate: AnyObject {
     func webSocketDidConnect()
     func webSocketDidReceiveQuote(data: [String: Any])
     func webSocketDidDisconnect(error: Error?)
+    func webSocketDidExhaustRetries()
 }
 
 protocol WebSocketService: AnyObject {

@@ -8,8 +8,10 @@ import SnapKit
 
 final class QuoteDetailViewController: UIViewController {
 
-    private let quote: Quote
+    private var quote: Quote
     private let imageLoader: ImageLoading
+    private let viewModel: QuotesViewModel
+    private var observationId: UUID?
 
     // MARK: - UI Elements
 
@@ -61,16 +63,25 @@ final class QuoteDetailViewController: UIViewController {
         return stack
     }()
 
+    private var infoValueLabels: [String: UILabel] = [:]
+
     // MARK: - Init
 
-    init(quote: Quote, imageLoader: ImageLoading = ImageLoader.shared) {
+    init(quote: Quote, imageLoader: ImageLoading, viewModel: QuotesViewModel) {
         self.quote = quote
         self.imageLoader = imageLoader
+        self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        if let id = observationId {
+            viewModel.removeObservation(id)
+        }
     }
 
     // MARK: - Lifecycle
@@ -80,7 +91,13 @@ final class QuoteDetailViewController: UIViewController {
         view.backgroundColor = Colors.background
         title = quote.ticker
         setupLayout()
-        configure()
+        configure(with: quote)
+        loadLogo()
+
+        observationId = viewModel.observeQuote(for: quote.ticker) { [weak self] updatedQuote in
+            self?.quote = updatedQuote
+            self?.updateDynamicContent(with: updatedQuote)
+        }
     }
 
     // MARK: - Setup
@@ -118,7 +135,9 @@ final class QuoteDetailViewController: UIViewController {
         }
     }
 
-    private func configure() {
+    // MARK: - Configure
+
+    private func configure(with quote: Quote) {
         tickerLabel.text = quote.ticker
 
         // Name
@@ -131,6 +150,23 @@ final class QuoteDetailViewController: UIViewController {
         }
         nameLabel.text = nameParts.joined(separator: " | ")
 
+        updateDynamicContent(with: quote)
+
+        // Info rows
+        addInfoRow(key: "ticker", title: "Ticker", value: quote.ticker)
+        addInfoRow(key: "exchange", title: "Exchange", value: quote.lastTradeExchange)
+        addInfoRow(key: "name", title: "Name", value: quote.name)
+        addInfoRow(key: "price", title: "Last Trade Price",
+                   value: quote.lastTradePrice.map { QuoteFormatter.formatPrice($0, minStep: quote.minStep) })
+        addInfoRow(key: "pcp", title: "Change (%)",
+                   value: quote.percentChange.map { QuoteFormatter.formatPercentChange($0) })
+        addInfoRow(key: "chg", title: "Change (pts)",
+                   value: quote.pointChange.map { QuoteFormatter.formatPointChange($0, minStep: quote.minStep) })
+        addInfoRow(key: "minStep", title: "Min Step",
+                   value: quote.minStep.map { "\($0)" })
+    }
+
+    private func updateDynamicContent(with quote: Quote) {
         // Price
         priceLabel.text = QuoteFormatter.formatPrice(quote.lastTradePrice, minStep: quote.minStep)
 
@@ -140,36 +176,40 @@ final class QuoteDetailViewController: UIViewController {
         changeLabel.text = "\(percentText)  ( \(pointText) )"
         changeLabel.textColor = QuoteFormatter.color(for: quote.changeDirection)
 
-        // Info rows
-        addInfoRow(title: "Ticker", value: quote.ticker)
-        if let exchange = quote.lastTradeExchange {
-            addInfoRow(title: "Exchange", value: exchange)
+        // Update info row values
+        infoValueLabels["price"]?.text = quote.lastTradePrice.map {
+            QuoteFormatter.formatPrice($0, minStep: quote.minStep)
         }
-        if let name = quote.name {
-            addInfoRow(title: "Name", value: name)
+        infoValueLabels["pcp"]?.text = quote.percentChange.map {
+            QuoteFormatter.formatPercentChange($0)
         }
-        if let price = quote.lastTradePrice {
-            addInfoRow(title: "Last Trade Price", value: QuoteFormatter.formatPrice(price, minStep: quote.minStep))
-        }
-        if let pcp = quote.percentChange {
-            addInfoRow(title: "Change (%)", value: QuoteFormatter.formatPercentChange(pcp))
-        }
-        if let chg = quote.pointChange {
-            addInfoRow(title: "Change (pts)", value: QuoteFormatter.formatPointChange(chg, minStep: quote.minStep))
-        }
-        if let step = quote.minStep {
-            addInfoRow(title: "Min Step", value: "\(step)")
+        infoValueLabels["chg"]?.text = quote.pointChange.map {
+            QuoteFormatter.formatPointChange($0, minStep: quote.minStep)
         }
 
-        // Logo
-        if let url = Constants.logoURL(for: quote.ticker) {
-            imageLoader.loadImage(from: url) { [weak self] image in
-                self?.logoImageView.image = image
-            }
+        // Name/exchange might update too
+        var nameParts: [String] = []
+        if let exchange = quote.lastTradeExchange, !exchange.isEmpty {
+            nameParts.append(exchange)
+        }
+        if let name = quote.name, !name.isEmpty {
+            nameParts.append(name)
+        }
+        nameLabel.text = nameParts.joined(separator: " | ")
+        infoValueLabels["exchange"]?.text = quote.lastTradeExchange
+        infoValueLabels["name"]?.text = quote.name
+    }
+
+    private func loadLogo() {
+        guard let url = Constants.logoURL(for: quote.ticker) else { return }
+        imageLoader.loadImage(from: url) { [weak self] image in
+            self?.logoImageView.image = image
         }
     }
 
-    private func addInfoRow(title: String, value: String) {
+    private func addInfoRow(key: String, title: String, value: String?) {
+        guard let value else { return }
+
         let row = UIStackView()
         row.axis = .horizontal
         row.distribution = .fill
@@ -184,6 +224,8 @@ final class QuoteDetailViewController: UIViewController {
         valueLabel.textColor = Colors.title
         valueLabel.text = value
         valueLabel.textAlignment = .right
+
+        infoValueLabels[key] = valueLabel
 
         row.addArrangedSubview(titleLabel)
         row.addArrangedSubview(valueLabel)

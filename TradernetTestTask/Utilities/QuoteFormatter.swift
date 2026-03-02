@@ -66,18 +66,19 @@ enum QuoteFormatter {
         return 0
     }
 
-    private static let decimalFormatter: NumberFormatter = {
+    private static func makeDecimalFormatter(minFraction: Int, maxFraction: Int) -> NumberFormatter {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = " "
         formatter.decimalSeparator = "."
         formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = minFraction
+        formatter.maximumFractionDigits = maxFraction
         return formatter
-    }()
+    }
 
     private static func formatDecimal(_ value: Double, minFraction: Int, maxFraction: Int) -> String {
-        decimalFormatter.minimumFractionDigits = minFraction
-        decimalFormatter.maximumFractionDigits = maxFraction
-        return decimalFormatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        let formatter = makeDecimalFormatter(minFraction: minFraction, maxFraction: maxFraction)
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }

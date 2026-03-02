@@ -13,6 +13,8 @@ final class TradernetSocketService: NSObject, WebSocketService {
     private var urlSession: URLSession?
     private var pendingTickers: [String]?
     private var reconnectWorkItem: DispatchWorkItem?
+    private var connectionTimeoutWorkItem: DispatchWorkItem?
+    private var activityTimeoutWorkItem: DispatchWorkItem?
 
     private enum ConnectionState {
         case disconnected
@@ -23,11 +25,50 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private var state: ConnectionState = .disconnected
     private var retryCount = 0
-    private let maxRetries = 10
-    private let baseRetryInterval: TimeInterval = 1
+    private let reconnectStrategy: ReconnectStrategy
+    private let connectionTimeout: TimeInterval
+    private let activityTimeout: TimeInterval
+
+    // MARK: - Weak Delegate Proxy
+
+    /// Prevents URLSession from strongly retaining `TradernetSocketService`.
+    /// URLSession keeps a strong reference to its delegate; this proxy breaks that cycle
+    /// by holding only a weak reference back to the service.
+    private class WeakSessionDelegate: NSObject, URLSessionWebSocketDelegate {
+        weak var target: TradernetSocketService?
+
+        init(target: TradernetSocketService) {
+            self.target = target
+        }
+
+        func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+                        didOpenWithProtocol protocol: String?) {
+            target?.urlSession(session, webSocketTask: webSocketTask, didOpenWithProtocol: `protocol`)
+        }
+
+        func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+                        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+            target?.urlSession(session, webSocketTask: webSocketTask, didCloseWith: closeCode, reason: reason)
+        }
+    }
+
+    private var sessionDelegate: WeakSessionDelegate?
+
+    // MARK: - Init
+
+    init(reconnectStrategy: ReconnectStrategy = ReconnectStrategy(),
+         connectionTimeout: TimeInterval = 15,
+         activityTimeout: TimeInterval = 45) {
+        self.reconnectStrategy = reconnectStrategy
+        self.connectionTimeout = connectionTimeout
+        self.activityTimeout = activityTimeout
+        super.init()
+    }
+
+    // MARK: - WebSocketService
 
     func connect() {
-        guard state == .disconnected else { return }
+        guard state == .disconnected || state == .disconnectedManually else { return }
         state = .connecting
         retryCount = 0
         openConnection()
@@ -36,6 +77,7 @@ final class TradernetSocketService: NSObject, WebSocketService {
     func disconnect() {
         state = .disconnectedManually
         cancelReconnect()
+        cancelTimeouts()
         tearDownConnection()
         delegate?.webSocketDidDisconnect(error: nil)
     }
@@ -50,10 +92,11 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     deinit {
         cancelReconnect()
+        cancelTimeouts()
         tearDownConnection()
     }
 
-    // MARK: - Private
+    // MARK: - Connection Lifecycle
 
     private func openConnection() {
         tearDownConnection()
@@ -62,11 +105,15 @@ final class TradernetSocketService: NSObject, WebSocketService {
             state = .disconnected
             return
         }
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
+
+        let proxy = WeakSessionDelegate(target: self)
+        sessionDelegate = proxy
+        let session = URLSession(configuration: .default, delegate: proxy, delegateQueue: .main)
         self.urlSession = session
         webSocketTask = session.webSocketTask(with: url)
         webSocketTask?.resume()
         listen()
+        scheduleConnectionTimeout()
     }
 
     private func tearDownConnection() {
@@ -74,43 +121,44 @@ final class TradernetSocketService: NSObject, WebSocketService {
         webSocketTask = nil
         urlSession?.invalidateAndCancel()
         urlSession = nil
+        sessionDelegate = nil
     }
+
+    // MARK: - Listening
 
     private func listen() {
         webSocketTask?.receive { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let message):
+                self.resetActivityTimeout()
                 switch message {
                 case .string(let text):
-                    handleMessage(text)
+                    self.handleMessage(text)
                 case .data:
                     break
                 @unknown default:
                     break
                 }
-                listen()
+                self.listen()
             case .failure(let error):
-                handleDisconnect(error: error)
+                self.handleDisconnect(error: error)
             }
         }
     }
 
+    // MARK: - Message Handling
+
     private func handleMessage(_ text: String) {
-        // Engine.IO ping/pong
-        if text == "2" { sendRaw("3"); return }
-        if text == "3" { return }
-
-        // Socket.IO event: "42[...]"
-        if text.hasPrefix("42") {
-            handleEventPayload(String(text.dropFirst(2)))
-            return
-        }
-
-        // Raw JSON array (server sends events without Engine.IO framing)
-        if text.hasPrefix("[") {
-            handleEventPayload(text)
-            return
+        switch SocketMessageParser.detectFrame(text) {
+        case .ping:
+            sendRaw(SocketMessageParser.pongFrame)
+        case .pong:
+            break
+        case .socketIOEvent(let payload), .rawJSONEvent(let payload):
+            handleEventPayload(payload)
+        case .unknown:
+            break
         }
     }
 
@@ -126,6 +174,7 @@ final class TradernetSocketService: NSObject, WebSocketService {
             if state != .connected {
                 state = .connected
                 retryCount = 0
+                cancelConnectionTimeout()
                 delegate?.webSocketDidConnect()
                 if let tickers = pendingTickers {
                     pendingTickers = nil
@@ -137,17 +186,22 @@ final class TradernetSocketService: NSObject, WebSocketService {
         }
     }
 
+    // MARK: - Disconnect & Reconnect
+
     private func handleDisconnect(error: Error?) {
         guard state != .disconnectedManually else { return }
+        cancelTimeouts()
         state = .disconnected
         delegate?.webSocketDidDisconnect(error: error)
         scheduleReconnect()
     }
 
     private func scheduleReconnect() {
-        guard retryCount < maxRetries else { return }
-        let delay = baseRetryInterval * pow(2, Double(retryCount))
-        let capped = min(delay, 30)
+        guard reconnectStrategy.canRetry(attempt: retryCount) else {
+            delegate?.webSocketDidExhaustRetries()
+            return
+        }
+        let delay = reconnectStrategy.delay(forAttempt: retryCount)
         retryCount += 1
 
         let workItem = DispatchWorkItem { [weak self] in
@@ -156,13 +210,53 @@ final class TradernetSocketService: NSObject, WebSocketService {
             self.openConnection()
         }
         reconnectWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + capped, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func cancelReconnect() {
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
     }
+
+    // MARK: - Timeouts
+
+    private func scheduleConnectionTimeout() {
+        cancelConnectionTimeout()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .connecting else { return }
+            self.handleDisconnect(error: nil)
+        }
+        connectionTimeoutWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + connectionTimeout, execute: workItem)
+    }
+
+    private func cancelConnectionTimeout() {
+        connectionTimeoutWorkItem?.cancel()
+        connectionTimeoutWorkItem = nil
+    }
+
+    private func resetActivityTimeout() {
+        cancelActivityTimeout()
+        guard state == .connected || state == .connecting else { return }
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .connected else { return }
+            self.handleDisconnect(error: nil)
+        }
+        activityTimeoutWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + activityTimeout, execute: workItem)
+    }
+
+    private func cancelActivityTimeout() {
+        activityTimeoutWorkItem?.cancel()
+        activityTimeoutWorkItem = nil
+    }
+
+    private func cancelTimeouts() {
+        cancelConnectionTimeout()
+        cancelActivityTimeout()
+    }
+
+    // MARK: - Sending
 
     private func sendSubscription(_ tickers: [String]) {
         guard let data = try? JSONSerialization.data(
@@ -185,31 +279,11 @@ final class TradernetSocketService: NSObject, WebSocketService {
 extension TradernetSocketService: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        // Wait for server's userData event before subscribing
+        // Wait for server's userData event before declaring connected
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         handleDisconnect(error: nil)
-    }
-}
-
-// MARK: - Socket Message Parser
-
-enum SocketMessageParser {
-
-    struct ParsedMessage {
-        let event: String
-        let data: Any?
-    }
-
-    static func parse(_ payload: String) -> ParsedMessage? {
-        guard let data = payload.data(using: .utf8),
-              let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
-              let event = array.first as? String else {
-            return nil
-        }
-        let eventData = array.count > 1 ? array[1] : nil
-        return ParsedMessage(event: event, data: eventData)
     }
 }

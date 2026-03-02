@@ -17,6 +17,7 @@ final class QuoteCell: UITableViewCell {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 10
+        iv.isHidden = true
         return iv
     }()
 
@@ -74,7 +75,8 @@ final class QuoteCell: UITableViewCell {
 
     private var currentTicker: String?
     private var imageLoadTask: URLSessionDataTask?
-    private var imageLoader: ImageLoading = ImageLoader.shared
+    private var imageLoader: ImageLoading?
+    private let quotir = Quotir()
 
     // MARK: - Init
 
@@ -94,9 +96,10 @@ final class QuoteCell: UITableViewCell {
         imageLoadTask?.cancel()
         imageLoadTask = nil
         logoImageView.image = nil
-        logoImageView.removeFromSuperview()
+        logoImageView.isHidden = true
         currentTicker = nil
         percentBadge.isHidden = true
+        quotir.clearRestingColor(for: percentBadge)
         priceChangeLabel.text = nil
         subtitleLabel.text = nil
     }
@@ -104,6 +107,7 @@ final class QuoteCell: UITableViewCell {
     // MARK: - Layout
 
     private func setupLayout() {
+        tickerRow.addArrangedSubview(logoImageView)
         tickerRow.addArrangedSubview(tickerLabel)
 
         // Left column: ticker row + subtitle, vertically centered
@@ -151,7 +155,7 @@ final class QuoteCell: UITableViewCell {
 
     // MARK: - Configure
 
-    func configure(with quote: Quote, direction: Quote.ChangeDirection?, imageLoader: ImageLoading = ImageLoader.shared) {
+    func configure(with quote: Quote, direction: Quote.ChangeDirection?, imageLoader: ImageLoading) {
         self.imageLoader = imageLoader
         currentTicker = quote.ticker
         tickerLabel.text = quote.ticker
@@ -188,7 +192,7 @@ final class QuoteCell: UITableViewCell {
 
         // Flash animation on update
         if let direction = direction, direction != .none {
-            Quotir.flash(view: percentBadge, direction: direction)
+            quotir.flash(view: percentBadge, direction: direction)
         }
 
         // Load logo
@@ -199,10 +203,10 @@ final class QuoteCell: UITableViewCell {
 
     private func loadLogo(for ticker: String) {
         guard let url = Constants.logoURL(for: ticker) else { return }
-        imageLoadTask = imageLoader.loadImage(from: url) { [weak self] image in
+        imageLoadTask = imageLoader?.loadImage(from: url) { [weak self] image in
             guard let self, currentTicker == ticker, let image else { return }
             self.logoImageView.image = image
-            self.tickerRow.insertArrangedSubview(self.logoImageView, at: 0)
+            self.logoImageView.isHidden = false
         }
     }
 }
