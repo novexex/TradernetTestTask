@@ -77,6 +77,7 @@ final class QuoteCell: UITableViewCell {
     private var imageLoadTask: URLSessionDataTask?
     private var imageLoader: ImageLoading?
     private var formatter: QuoteFormatting?
+    private var logoURLProvider: LogoURLProviding?
 
     // MARK: - Init
 
@@ -154,9 +155,10 @@ final class QuoteCell: UITableViewCell {
 
     // MARK: - Configure
 
-    func configure(with quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting) {
+    func configure(with quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting, logoURLProvider: LogoURLProviding) {
         self.imageLoader = imageLoader
         self.formatter = formatter
+        self.logoURLProvider = logoURLProvider
         currentTicker = quote.ticker
         tickerLabel.text = quote.ticker
 
@@ -174,7 +176,7 @@ final class QuoteCell: UITableViewCell {
         if quote.percentChange != nil {
             let percentText = formatter.formatPercentChange(quote.percentChange)
             percentBadge.text = "  \(percentText)  "
-            let badgeColor = formatter.color(for: quote.changeDirection)
+            let badgeColor = Colors.color(for: quote.changeDirection)
             percentBadge.backgroundColor = badgeColor
             percentBadge.isHidden = false
         } else {
@@ -197,7 +199,7 @@ final class QuoteCell: UITableViewCell {
     // MARK: - Logo Loading
 
     private func loadLogo(for ticker: String) {
-        guard let url = Constants.logoURL(for: ticker) else { return }
+        guard let url = logoURLProvider?.logoURL(for: ticker) else { return }
         imageLoadTask = imageLoader?.loadImage(from: url) { [weak self] image in
             guard let self, currentTicker == ticker, let image else { return }
             self.logoImageView.image = image

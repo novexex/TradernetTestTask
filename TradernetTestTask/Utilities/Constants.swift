@@ -42,9 +42,4 @@ enum Constants {
         "MGGT.EU",
         "SGGD.EU"
     ]
-
-    static func logoURL(for ticker: String) -> URL? {
-        let lowercased = ticker.lowercased()
-        return URL(string: "https://tradernet.com/logos/get-logo-by-ticker?ticker=\(lowercased)")
-    }
 }

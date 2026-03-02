@@ -12,6 +12,7 @@ final class QuotesViewController: UIViewController {
     private let viewModel: QuotesViewModel
     private let imageLoader: ImageLoading
     private let formatter: QuoteFormatting
+    private let logoURLProvider: LogoURLProviding
     private weak var coordinator: QuotesCoordinating?
 
     private let statusLabel: UILabel = {
@@ -35,10 +36,11 @@ final class QuotesViewController: UIViewController {
 
     // MARK: - Init
 
-    init(viewModel: QuotesViewModel, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), coordinator: QuotesCoordinating?) {
+    init(viewModel: QuotesViewModel, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), logoURLProvider: LogoURLProviding = LogoURLProvider(), coordinator: QuotesCoordinating?) {
         self.viewModel = viewModel
         self.imageLoader = imageLoader
         self.formatter = formatter
+        self.logoURLProvider = logoURLProvider
         self.coordinator = coordinator
         super.init(nibName: nil, bundle: nil)
     }
@@ -131,7 +133,7 @@ extension QuotesViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         let quote = viewModel.quotes[indexPath.row]
-        cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter)
+        cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter, logoURLProvider: logoURLProvider)
         return cell
     }
 }
@@ -159,7 +161,7 @@ extension QuotesViewController: QuotesViewModelDelegate {
             let indexPath = IndexPath(row: index, section: 0)
             if let cell = tableView.cellForRow(at: indexPath) as? QuoteCell {
                 let quote = viewModel.quotes[index]
-                cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter)
+                cell.configure(with: quote, imageLoader: imageLoader, formatter: formatter, logoURLProvider: logoURLProvider)
             }
         }
     }

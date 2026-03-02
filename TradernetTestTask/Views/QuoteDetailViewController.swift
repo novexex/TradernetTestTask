@@ -11,6 +11,7 @@ final class QuoteDetailViewController: UIViewController {
     private var quote: Quote
     private let imageLoader: ImageLoading
     private let formatter: QuoteFormatting
+    private let logoURLProvider: LogoURLProviding
     private let viewModel: QuotesViewModel
     private var observationId: UUID?
 
@@ -68,10 +69,11 @@ final class QuoteDetailViewController: UIViewController {
 
     // MARK: - Init
 
-    init(quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), viewModel: QuotesViewModel) {
+    init(quote: Quote, imageLoader: ImageLoading, formatter: QuoteFormatting = QuoteFormatter(), logoURLProvider: LogoURLProviding = LogoURLProvider(), viewModel: QuotesViewModel) {
         self.quote = quote
         self.imageLoader = imageLoader
         self.formatter = formatter
+        self.logoURLProvider = logoURLProvider
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -176,7 +178,7 @@ final class QuoteDetailViewController: UIViewController {
         let percentText = formatter.formatPercentChange(quote.percentChange)
         let pointText = formatter.formatPointChange(quote.pointChange, minStep: quote.minStep)
         changeLabel.text = "\(percentText)  ( \(pointText) )"
-        changeLabel.textColor = formatter.color(for: quote.changeDirection)
+        changeLabel.textColor = Colors.color(for: quote.changeDirection)
 
         // Update info row values
         infoValueLabels[.lastTradePrice]?.text = quote.lastTradePrice.map {
@@ -203,7 +205,7 @@ final class QuoteDetailViewController: UIViewController {
     }
 
     private func loadLogo() {
-        guard let url = Constants.logoURL(for: quote.ticker) else { return }
+        guard let url = logoURLProvider.logoURL(for: quote.ticker) else { return }
         imageLoader.loadImage(from: url) { [weak self] image in
             self?.logoImageView.image = image
         }

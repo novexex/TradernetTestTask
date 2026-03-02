@@ -3,14 +3,13 @@
 //  TradernetTestTask
 //
 
-import UIKit
+import Foundation
 
 protocol QuoteFormatting {
     func formatPercentChange(_ value: Double?) -> String
     func formatPrice(_ value: Double?, minStep: Double?) -> String
     func formatPointChange(_ value: Double?, minStep: Double?) -> String
     func formatPriceWithChange(price: Double?, change: Double?, minStep: Double?) -> String
-    func color(for direction: Quote.ChangeDirection) -> UIColor
     func decimalPlaces(for minStep: Double?) -> Int
 }
 
@@ -49,16 +48,6 @@ struct QuoteFormatter: QuoteFormatting {
         if priceStr.isEmpty { return "" }
         if changeStr.isEmpty { return priceStr }
         return "\(priceStr) ( \(changeStr) )"
-    }
-
-    // MARK: - Colors
-
-    func color(for direction: Quote.ChangeDirection) -> UIColor {
-        switch direction {
-        case .up: return Colors.green
-        case .down: return Colors.red
-        case .none: return Colors.placeholder
-        }
     }
 
     // MARK: - Helpers

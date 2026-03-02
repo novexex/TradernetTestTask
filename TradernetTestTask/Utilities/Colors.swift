@@ -14,4 +14,12 @@ enum Colors {
     static let background = UIColor.white
     static let green = UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)
     static let red = UIColor(red: 244/255, green: 67/255, blue: 54/255, alpha: 1)
+
+    static func color(for direction: Quote.ChangeDirection) -> UIColor {
+        switch direction {
+        case .up: return green
+        case .down: return red
+        case .none: return placeholder
+        }
+    }
 }

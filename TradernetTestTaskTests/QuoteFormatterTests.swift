@@ -107,17 +107,17 @@ final class QuoteFormatterTests: XCTestCase {
     // MARK: - Color
 
     func testColorForUp() {
-        let color = formatter.color(for: .up)
-        XCTAssertNotNil(color)
+        let color = Colors.color(for: .up)
+        XCTAssertEqual(color, Colors.green)
     }
 
     func testColorForDown() {
-        let color = formatter.color(for: .down)
-        XCTAssertNotNil(color)
+        let color = Colors.color(for: .down)
+        XCTAssertEqual(color, Colors.red)
     }
 
     func testColorForNone() {
-        let color = formatter.color(for: .none)
-        XCTAssertNotNil(color)
+        let color = Colors.color(for: .none)
+        XCTAssertEqual(color, Colors.placeholder)
     }
 }
