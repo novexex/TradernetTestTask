@@ -11,11 +11,57 @@ final class TradernetSocketService: NSObject, WebSocketService {
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var urlSession: URLSession?
-    private var isConnected = false
     private var pendingTickers: [String]?
+    private var reconnectWorkItem: DispatchWorkItem?
+
+    private enum ConnectionState {
+        case disconnected
+        case connecting
+        case connected
+        case disconnectedManually
+    }
+
+    private var state: ConnectionState = .disconnected
+    private var retryCount = 0
+    private let maxRetries = 10
+    private let baseRetryInterval: TimeInterval = 1
 
     func connect() {
-        guard let url = URL(string: Constants.webSocketURL) else { return }
+        guard state == .disconnected else { return }
+        state = .connecting
+        retryCount = 0
+        openConnection()
+    }
+
+    func disconnect() {
+        state = .disconnectedManually
+        cancelReconnect()
+        tearDownConnection()
+        delegate?.webSocketDidDisconnect(error: nil)
+    }
+
+    func subscribe(to tickers: [String]) {
+        if state == .connected {
+            sendSubscription(tickers)
+        } else {
+            pendingTickers = tickers
+        }
+    }
+
+    deinit {
+        cancelReconnect()
+        tearDownConnection()
+    }
+
+    // MARK: - Private
+
+    private func openConnection() {
+        tearDownConnection()
+
+        guard let url = URL(string: Constants.webSocketURL) else {
+            state = .disconnected
+            return
+        }
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         self.urlSession = session
         webSocketTask = session.webSocketTask(with: url)
@@ -23,23 +69,12 @@ final class TradernetSocketService: NSObject, WebSocketService {
         listen()
     }
 
-    func disconnect() {
-        isConnected = false
+    private func tearDownConnection() {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         urlSession?.invalidateAndCancel()
         urlSession = nil
     }
-
-    func subscribe(to tickers: [String]) {
-        if isConnected {
-            sendSubscription(tickers)
-        } else {
-            pendingTickers = tickers
-        }
-    }
-
-    // MARK: - Private
 
     private func listen() {
         webSocketTask?.receive { [weak self] result in
@@ -88,8 +123,9 @@ final class TradernetSocketService: NSObject, WebSocketService {
                 delegate?.webSocketDidReceiveQuote(data: quoteData)
             }
         case "userData":
-            if !isConnected {
-                isConnected = true
+            if state != .connected {
+                state = .connected
+                retryCount = 0
                 delegate?.webSocketDidConnect()
                 if let tickers = pendingTickers {
                     pendingTickers = nil
@@ -102,11 +138,30 @@ final class TradernetSocketService: NSObject, WebSocketService {
     }
 
     private func handleDisconnect(error: Error?) {
-        isConnected = false
+        guard state != .disconnectedManually else { return }
+        state = .disconnected
         delegate?.webSocketDidDisconnect(error: error)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.connect()
+        scheduleReconnect()
+    }
+
+    private func scheduleReconnect() {
+        guard retryCount < maxRetries else { return }
+        let delay = baseRetryInterval * pow(2, Double(retryCount))
+        let capped = min(delay, 30)
+        retryCount += 1
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .disconnected else { return }
+            self.state = .connecting
+            self.openConnection()
         }
+        reconnectWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + capped, execute: workItem)
+    }
+
+    private func cancelReconnect() {
+        reconnectWorkItem?.cancel()
+        reconnectWorkItem = nil
     }
 
     private func sendSubscription(_ tickers: [String]) {

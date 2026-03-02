@@ -46,9 +46,9 @@ enum QuoteFormatter {
 
     static func color(for direction: Quote.ChangeDirection) -> UIColor {
         switch direction {
-        case .up: return UIColor(red: 76/255, green: 175/255, blue: 80/255, alpha: 1)   // #4CAF50
-        case .down: return UIColor(red: 244/255, green: 67/255, blue: 54/255, alpha: 1)  // #F44336
-        case .none: return UIColor(red: 150/255, green: 150/255, blue: 150/255, alpha: 1) // gray
+        case .up: return Colors.green
+        case .down: return Colors.red
+        case .none: return Colors.placeholder
         }
     }
 
@@ -66,14 +66,18 @@ enum QuoteFormatter {
         return 0
     }
 
-    private static func formatDecimal(_ value: Double, minFraction: Int, maxFraction: Int) -> String {
+    private static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = minFraction
-        formatter.maximumFractionDigits = maxFraction
         formatter.groupingSeparator = " "
         formatter.decimalSeparator = "."
         formatter.usesGroupingSeparator = true
-        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        return formatter
+    }()
+
+    private static func formatDecimal(_ value: Double, minFraction: Int, maxFraction: Int) -> String {
+        decimalFormatter.minimumFractionDigits = minFraction
+        decimalFormatter.maximumFractionDigits = maxFraction
+        return decimalFormatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }

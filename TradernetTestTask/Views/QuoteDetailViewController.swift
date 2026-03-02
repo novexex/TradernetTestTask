@@ -9,6 +9,7 @@ import SnapKit
 final class QuoteDetailViewController: UIViewController {
 
     private let quote: Quote
+    private let imageLoader: ImageLoading
 
     // MARK: - UI Elements
 
@@ -17,14 +18,14 @@ final class QuoteDetailViewController: UIViewController {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 32
-        iv.backgroundColor = UIColor(red: 230/255, green: 230/255, blue: 230/255, alpha: 1)
+        iv.backgroundColor = Colors.separator
         return iv
     }()
 
     private let tickerLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 28, weight: .bold)
-        label.textColor = UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)
+        label.textColor = Colors.title
         label.textAlignment = .center
         return label
     }()
@@ -32,7 +33,7 @@ final class QuoteDetailViewController: UIViewController {
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 15, weight: .regular)
-        label.textColor = UIColor(red: 120/255, green: 120/255, blue: 120/255, alpha: 1)
+        label.textColor = Colors.subtitle
         label.textAlignment = .center
         label.numberOfLines = 0
         return label
@@ -41,7 +42,7 @@ final class QuoteDetailViewController: UIViewController {
     private let priceLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 36, weight: .semibold)
-        label.textColor = UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)
+        label.textColor = Colors.title
         label.textAlignment = .center
         return label
     }()
@@ -62,8 +63,9 @@ final class QuoteDetailViewController: UIViewController {
 
     // MARK: - Init
 
-    init(quote: Quote) {
+    init(quote: Quote, imageLoader: ImageLoading = ImageLoader.shared) {
         self.quote = quote
+        self.imageLoader = imageLoader
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -75,7 +77,7 @@ final class QuoteDetailViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = Colors.background
         title = quote.ticker
         setupLayout()
         configure()
@@ -161,7 +163,7 @@ final class QuoteDetailViewController: UIViewController {
 
         // Logo
         if let url = Constants.logoURL(for: quote.ticker) {
-            ImageLoader.shared.loadImage(from: url) { [weak self] image in
+            imageLoader.loadImage(from: url) { [weak self] image in
                 self?.logoImageView.image = image
             }
         }
@@ -174,12 +176,12 @@ final class QuoteDetailViewController: UIViewController {
 
         let titleLabel = UILabel()
         titleLabel.font = .systemFont(ofSize: 15, weight: .regular)
-        titleLabel.textColor = UIColor(red: 120/255, green: 120/255, blue: 120/255, alpha: 1)
+        titleLabel.textColor = Colors.subtitle
         titleLabel.text = title
 
         let valueLabel = UILabel()
         valueLabel.font = .systemFont(ofSize: 15, weight: .medium)
-        valueLabel.textColor = UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)
+        valueLabel.textColor = Colors.title
         valueLabel.text = value
         valueLabel.textAlignment = .right
 
@@ -187,7 +189,7 @@ final class QuoteDetailViewController: UIViewController {
         row.addArrangedSubview(valueLabel)
 
         let separator = UIView()
-        separator.backgroundColor = UIColor(red: 230/255, green: 230/255, blue: 230/255, alpha: 1)
+        separator.backgroundColor = Colors.separator
 
         infoStack.addArrangedSubview(row)
         infoStack.addArrangedSubview(separator)

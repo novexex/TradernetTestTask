@@ -23,14 +23,14 @@ final class QuoteCell: UITableViewCell {
     private let tickerLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .bold)
-        label.textColor = UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)
+        label.textColor = Colors.title
         return label
     }()
 
     private let subtitleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .regular)
-        label.textColor = UIColor(red: 150/255, green: 150/255, blue: 150/255, alpha: 1)
+        label.textColor = Colors.placeholder
         label.lineBreakMode = .byTruncatingTail
         return label
     }()
@@ -48,7 +48,7 @@ final class QuoteCell: UITableViewCell {
     private let priceChangeLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .regular)
-        label.textColor = UIColor(red: 100/255, green: 100/255, blue: 100/255, alpha: 1)
+        label.textColor = Colors.secondaryText
         label.textAlignment = .right
         return label
     }()
@@ -57,7 +57,7 @@ final class QuoteCell: UITableViewCell {
         let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
         let iv = UIImageView()
         iv.image = UIImage(systemName: "chevron.right", withConfiguration: config)
-        iv.tintColor = UIColor(red: 150/255, green: 150/255, blue: 150/255, alpha: 1)
+        iv.tintColor = Colors.placeholder
         iv.contentMode = .scaleAspectFit
         return iv
     }()
@@ -74,13 +74,14 @@ final class QuoteCell: UITableViewCell {
 
     private var currentTicker: String?
     private var imageLoadTask: URLSessionDataTask?
+    private var imageLoader: ImageLoading = ImageLoader.shared
 
     // MARK: - Init
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .default
-        backgroundColor = .white
+        backgroundColor = Colors.background
         setupLayout()
     }
 
@@ -150,7 +151,8 @@ final class QuoteCell: UITableViewCell {
 
     // MARK: - Configure
 
-    func configure(with quote: Quote, direction: Quote.ChangeDirection?) {
+    func configure(with quote: Quote, direction: Quote.ChangeDirection?, imageLoader: ImageLoading = ImageLoader.shared) {
+        self.imageLoader = imageLoader
         currentTicker = quote.ticker
         tickerLabel.text = quote.ticker
 
@@ -197,7 +199,7 @@ final class QuoteCell: UITableViewCell {
 
     private func loadLogo(for ticker: String) {
         guard let url = Constants.logoURL(for: ticker) else { return }
-        imageLoadTask = ImageLoader.shared.loadImage(from: url) { [weak self] image in
+        imageLoadTask = imageLoader.loadImage(from: url) { [weak self] image in
             guard let self, currentTicker == ticker, let image else { return }
             self.logoImageView.image = image
             self.tickerRow.insertArrangedSubview(self.logoImageView, at: 0)

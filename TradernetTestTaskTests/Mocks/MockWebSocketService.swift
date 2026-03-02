@@ -26,6 +26,10 @@ final class MockWebSocketService: WebSocketService {
         subscribedTickers = tickers
     }
 
+    func resetSubscribedTickers() {
+        subscribedTickers = []
+    }
+
     // MARK: - Simulation
 
     func simulateConnect() {

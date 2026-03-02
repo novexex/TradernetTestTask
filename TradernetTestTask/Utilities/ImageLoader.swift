@@ -5,7 +5,12 @@
 
 import UIKit
 
-final class ImageLoader {
+protocol ImageLoading: AnyObject {
+    @discardableResult
+    func loadImage(from url: URL, completion: @escaping (UIImage?) -> Void) -> URLSessionDataTask?
+}
+
+final class ImageLoader: ImageLoading {
 
     static let shared = ImageLoader()
 

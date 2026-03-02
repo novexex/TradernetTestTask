@@ -10,12 +10,15 @@ final class QuotesViewController: UIViewController {
 
     private let tableView = UITableView()
     private let viewModel: QuotesViewModel
+    private let imageLoader: ImageLoading
+    private weak var coordinator: QuotesCoordinating?
 
     // MARK: - Init
 
-    init(viewModel: QuotesViewModel? = nil) {
-        let service = TradernetSocketService()
-        self.viewModel = viewModel ?? QuotesViewModel(service: service)
+    init(viewModel: QuotesViewModel, imageLoader: ImageLoading, coordinator: QuotesCoordinating?) {
+        self.viewModel = viewModel
+        self.imageLoader = imageLoader
+        self.coordinator = coordinator
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -27,7 +30,7 @@ final class QuotesViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = Colors.background
         title = "Quotes"
         configureNavigationBar()
         setupTableView()
@@ -47,8 +50,8 @@ final class QuotesViewController: UIViewController {
     private func configureNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .white
-        appearance.titleTextAttributes = [.foregroundColor: UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1)]
+        appearance.backgroundColor = Colors.background
+        appearance.titleTextAttributes = [.foregroundColor: Colors.title]
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
@@ -59,7 +62,7 @@ final class QuotesViewController: UIViewController {
         tableView.register(QuoteCell.self, forCellReuseIdentifier: QuoteCell.reuseIdentifier)
         tableView.rowHeight = 68
         tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
-        tableView.backgroundColor = .white
+        tableView.backgroundColor = Colors.background
 
         view.addSubview(tableView)
         tableView.snp.makeConstraints { make in
@@ -85,7 +88,7 @@ extension QuotesViewController: UITableViewDataSource {
         }
         let quote = viewModel.quotes[indexPath.row]
         let direction = viewModel.changeDirections[quote.ticker]
-        cell.configure(with: quote, direction: direction)
+        cell.configure(with: quote, direction: direction, imageLoader: imageLoader)
         return cell
     }
 }
@@ -97,8 +100,7 @@ extension QuotesViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let quote = viewModel.quotes[indexPath.row]
-        let detailVC = QuoteDetailViewController(quote: quote)
-        navigationController?.pushViewController(detailVC, animated: true)
+        coordinator?.showDetail(for: quote)
     }
 }
 

@@ -137,6 +137,27 @@ final class QuotesViewModelTests: XCTestCase {
         mockService.simulateQuote(data: ["c": "AAPL", "pcp": 2.0])
         XCTAssertEqual(viewModel.changeDirections["AAPL"], .up)
     }
+
+    // MARK: - Reconnection
+
+    func testResubscribesAfterReconnect() {
+        viewModel.start()
+        mockService.simulateConnect()
+        XCTAssertEqual(mockService.subscribedTickers, ["AAPL", "GAZP", "SBER"])
+
+        // Simulate disconnect + reconnect
+        mockService.resetSubscribedTickers()
+        mockService.simulateDisconnect()
+        mockService.simulateConnect()
+        XCTAssertEqual(mockService.subscribedTickers, ["AAPL", "GAZP", "SBER"])
+    }
+
+    func testQuotesPreservedAfterDisconnect() {
+        mockService.simulateQuote(data: ["c": "AAPL", "ltp": 150.0, "name": "Apple"])
+        mockService.simulateDisconnect()
+        XCTAssertEqual(viewModel.quotes[0].lastTradePrice, 150.0)
+        XCTAssertEqual(viewModel.quotes[0].name, "Apple")
+    }
 }
 
 // MARK: - Delegate Spy
